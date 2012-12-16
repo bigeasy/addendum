@@ -1,0 +1,18 @@
+{ "name": "addendum"
+, "description": "Asynchronous HTML5 and XML templates for Node.js and the browser."
+, "author": "Alan Gutierrez"
+, "version": "0.0.0"
+, "keywords": [ "rdbms", "database", "db", "migrations" ]
+, "licenses": [
+  { "type": "MIT"
+  , "url": "http://github.com/bigeasy/addendum/raw/master/LICENSE"
+  }]
+, "homepage": "https://github.com/bigeasy/addendum"
+, "repository":
+  { "type": "git"
+  , "url": "http://github.com/bigeasy/addendum.git"
+  }
+, "scripts" : { "test": "proof t/*/*.t.js" }
+, "devDependencies": { "proof": "0.0.16" }
+, "dependencies": {}
+}
