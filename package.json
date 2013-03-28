@@ -12,7 +12,7 @@
   { "type": "git"
   , "url": "http://github.com/bigeasy/addendum.git"
   }
-, "scripts" : { "test": "proof t/*/*.t.js" }
-, "devDependencies": { "proof": "0.0.24" }
+, "scripts" : { "test": "proof test t/*/*.t.js" }
+, "devDependencies": { "proof": "0.0.27" }
 , "dependencies": { "relatable": "0.0.2" }
 }
