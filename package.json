@@ -1,5 +1,5 @@
 { "name": "addendum"
-, "description": "Asynchronous HTML5 and XML templates for Node.js and the browser."
+, "description": "Database migrations for Node.js"
 , "author": "Alan Gutierrez"
 , "version": "0.0.0"
 , "keywords": [ "rdbms", "database", "db", "migrations" ]
@@ -19,5 +19,5 @@
   , "arguable": "0.0.8"
   , "cadence": "0.0.15"
   }
-, "bin": { "proof": "addendum.bin.js" }
+, "bin": { "addendum": "addendum.bin.js" }
 }
