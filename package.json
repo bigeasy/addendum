@@ -19,4 +19,5 @@
   , "arguable": "0.0.8"
   , "cadence": "0.0.15"
   }
+, "bin": { "proof": "addendum.bin.js" }
 }
