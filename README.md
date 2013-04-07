@@ -1,4 +1,4 @@
-# Addendum
+# Addendum [![Build Status](https://travis-ci.org/bigeasy/addendum.png?branch=master)](https://travis-ci.org/bigeasy/addendum) [![Coverage Status](https://coveralls.io/repos/bigeasy/addendum/badge.png?branch=master)](https://coveralls.io/r/bigeasy/addendum)
 
 Database migrations for Node.js projects.
 
