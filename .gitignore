@@ -1,4 +1,2 @@
-node_modules
-.DS_Store
-.AppleDouble
-*.swp
+/node_modules
+.proof.out
