@@ -3,6 +3,12 @@
 require("proof")(1, function (step, ok) {
   var Addendum = require('../..');
   ok(Addendum, 'require');
+  var addendum = new Addendum();
+  addendum.amend(function (amendment) {
+    amendment.createSchema("omnicorp");
+    amendment.createTable("employees", function (table) {
+    });
+  });
 });
 
 exports.addendum = function (addendum) {

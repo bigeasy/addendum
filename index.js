@@ -1,4 +1,4 @@
-var __slice = [];
+var __slice = [].slice;
 
 module.exports = Addendum;
 
@@ -6,7 +6,7 @@ function Addendum () {
 }
 
 function Amendment (addendum) {
-  this._opreations = [];
+  this._operations = [];
 }
 
 capture(Amendment.prototype, 'createSchema(name)');
@@ -25,17 +25,22 @@ function capture (object, method) {
       operation[parameter] = vargs[index]; 
     });
     this._operations.push(operation);
+    if (this['_' + method]) {
+      this['_' + method](operation);
+    }
   }
 }
 
 capture(Table.prototype, 'varying(name, length)');
 capture(Table.prototype, 'autoid(name)');
+capture(Amendment.prototype, 'createTable(name, callback)');
 
-Amendment.prototype.createTable = function (name) {
-  this._operations.push({ type: 'useSchema', name: name });
+Amendment.prototype._createTable = function (operation) {
+  var table = new Table(); 
+  operation.callback(table);
 }
 
-Addendum.amend = function (builder) {
+Addendum.prototype.amend = function (builder) {
   var amendment = new Amendment(this);
   builder(amendment);
 }
