@@ -13,7 +13,7 @@
   , "url": "http://github.com/bigeasy/addendum.git"
   }
 , "scripts" : { "test": "proof platform win32 && proof test t/*/*.t.js || t/test" }
-, "devDependencies": { "proof": "0.0.28" }
+, "devDependencies": { "proof": "0.0.32" }
 , "dependencies":
   { "relatable": "0.0.2"
   , "arguable": "0.0.8"
