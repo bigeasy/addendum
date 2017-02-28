@@ -1,23 +1,34 @@
-{ "name": "addendum"
-, "description": "Database migrations for Node.js"
-, "author": "Alan Gutierrez"
-, "version": "0.0.0"
-, "keywords": [ "rdbms", "database", "db", "migrations" ]
-, "licenses": [
-  { "type": "MIT"
-  , "url": "http://github.com/bigeasy/addendum/raw/master/LICENSE"
-  }]
-, "homepage": "https://github.com/bigeasy/addendum"
-, "repository":
-  { "type": "git"
-  , "url": "http://github.com/bigeasy/addendum.git"
-  }
-, "scripts" : { "test": "proof platform win32 && proof test t/*/*.t.js || t/test" }
-, "devDependencies": { "proof": "0.0.32" }
-, "dependencies":
-  { "relatable": "0.0.2"
-  , "arguable": "0.0.8"
-  , "cadence": "0.0.15"
-  }
-, "bin": { "addendum": "addendum.bin.js" }
+{
+    "name":                 "addendum",
+    "version":              "0.0.0",
+    "description":
+
+      "Database migrations for Node.js",
+
+    "keywords":
+    [
+                            "rdbms", "database", "db", "migrations"
+    ],
+    "author":               "Alan Gutierrez",
+    "homepage":             "https://github.com/bigeasy/addendum",
+    "repository":
+    {
+                            "type": "git",
+                            "url": "http://github.com/bigeasy/addendum.git"
+    },
+    "dependencies":
+    {
+    },
+    "devDependencies":
+    {
+                            "proof":                        "1.2.x"
+    },
+    "bin":
+    {
+                            "addendum":                     "addendum.bin.js"
+    },
+    "scripts":
+    {
+                            "test": "proof platform win32 && proof test t/*/*.t.js || t/test"
+    }
 }
