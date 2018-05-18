@@ -1,7 +1,6 @@
 var cadence = require('cadence')
 var logger = require('prolific.logger').createLogger('memento')
 var crypto = require('crypto')
-var abend = require('abend')
 var assert = require('assert')
 var Cubbyhole = require('cubbyhole')
 
