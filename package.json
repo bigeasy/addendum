@@ -14,7 +14,7 @@
     "repository":
     {
                             "type": "git",
-                            "url": "http://github.com/bigeasy/addendum.git"
+                            "url": "bigeasy/addendum"
     },
     "dependencies":
     {
