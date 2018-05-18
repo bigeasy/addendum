@@ -18,6 +18,8 @@
     },
     "dependencies":
     {
+                            "cubbyhole":                    "1.0.x",
+                            "prolific.logger":              "6.0.x"
     },
     "devDependencies":
     {
