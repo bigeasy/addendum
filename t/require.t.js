@@ -1,6 +1,6 @@
-require('proof/redux')(1, prove)
+require('proof')(1, prove)
 
-function prove (assert) {
+function prove (okay) {
     var bin = require('../addendum.bin')
-    assert(bin, 'require')
+    okay(bin, 'require')
 }
