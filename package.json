@@ -19,8 +19,12 @@
     "dependencies":
     {
                             "cadence":                      "1.0.x",
+                            "cliffhanger":                  "2.0.x",
                             "cubbyhole":                    "1.0.x",
-                            "prolific.logger":              "6.0.x"
+                            "destructible":                 "0.28.x",
+                            "prolific.logger":              "6.0.x",
+                            "reactor":                      "10.2.x",
+                            "vizsla":                       "12.8.x"
     },
     "devDependencies":
     {

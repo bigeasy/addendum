@@ -4,13 +4,22 @@ var crypto = require('crypto')
 var assert = require('assert')
 var Cubbyhole = require('cubbyhole')
 
+var Reactor = require('reactor')
+
 function Addendum (cliffhanger, nodes) {
     this._nodes = nodes
     this._index = 0
     this._cliffhanger = cliffhanger
     this._stores = {}
     this._cubbyholes = new Cubbyhole
+    this.reactor = new Reactor(this, function (dispatcher) {
+        dispatcher.dispatch('GET /', 'index')
+    })
 }
+
+Addendum.prototype.index = cadence(function (async) {
+    return [ 200, { 'content-type': 'text/plain' }, 'Addendum Consensus API\n' ]
+})
 
 Addendum.prototype.test = cadence(function (async, conference, body) {
     console.log('GOT TEST', body)
