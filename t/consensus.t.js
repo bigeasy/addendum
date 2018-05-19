@@ -51,6 +51,7 @@ function prove (async, okay) {
                 raise: true
             }, async())
             counterfeiter.events.shifter().join(function (event) {
+                console.log(event)
                 if (
                     event.type == 'consumed' &&
                     event.id == 'first' &&
@@ -63,10 +64,18 @@ function prove (async, okay) {
         }, function () {
             okay(addendums.first._token != null, 'registered')
         }, function () {
-            // To exit without error we need to give the consensus algorithm a
-            // moment to follow through on its network communication.
-            // TODO Remove and gracefully scram on `destroy`.
-            setTimeout(async(), 250)
+            // The reason we need to wait a tick to exit is because we're
+            // actually being called by the Paxos algorithm itself as it pushes
+            // an event into it's log. That invokes the event handler in
+            // Compassion's Conference object. The Compassion Conference object
+            // is not going to do anything asynchronous with this version of our
+            // tests because we've not registered any postbacks. When pushes the
+            // event onto consume it will get here where here is just before the
+            // `Destructile.destroy()` is called. `Destructible.destroy()` ruins
+            // Paxos so it can't continue to operate when it comes back from
+            // posting to it's log.
+            console.log('WOULD DESTROY')
+            setImmediate(async())
         })
     })
 }
