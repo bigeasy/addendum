@@ -1,10 +1,10 @@
 var cadence = require('cadence')
-var logger = require('prolific.logger').createLogger('memento')
+var logger = require('prolific.logger').createLogger('addendum')
 var crypto = require('crypto')
 var assert = require('assert')
 var Cubbyhole = require('cubbyhole')
 
-function Memento (cliffhanger, nodes) {
+function Addendum (cliffhanger, nodes) {
     this._nodes = nodes
     this._index = 0
     this._cliffhanger = cliffhanger
@@ -12,11 +12,11 @@ function Memento (cliffhanger, nodes) {
     this._cubbyholes = new Cubbyhole
 }
 
-Memento.prototype.test = cadence(function (async, conference, body) {
+Addendum.prototype.test = cadence(function (async, conference, body) {
     console.log('GOT TEST', body)
 })
 
-Memento.prototype.join = cadence(function (async, conference) {
+Addendum.prototype.join = cadence(function (async, conference) {
     async(function () {
         var socket = null, shifter = null
         if (!conference.replaying) {
@@ -49,7 +49,7 @@ Memento.prototype.join = cadence(function (async, conference) {
     })
 })
 
-Memento.prototype.immigrate = cadence(function (async, conference, id) {
+Addendum.prototype.immigrate = cadence(function (async, conference, id) {
     console.log('IMMIGRATE', id)
     this._cubbyholes.set(conference.government.promise, null, {
         nodes: JSON.parse(JSON.stringify(this._nodes)),
@@ -57,15 +57,15 @@ Memento.prototype.immigrate = cadence(function (async, conference, id) {
     })
 })
 
-Memento.prototype.naturalized = cadence(function (async, conference, promise) {
+Addendum.prototype.naturalized = cadence(function (async, conference, promise) {
     delete this._cubbyholes.remove(promise)
 })
 
-Memento.prototype.exile = cadence(function (async, conference, id) {
+Addendum.prototype.exile = cadence(function (async, conference, id) {
     this._cubbys.remove(conference.government.exile.promise)
 })
 
-Memento.prototype._socket = cadence(function (async, socket, header) {
+Addendum.prototype._socket = cadence(function (async, socket, header) {
     var shifter = socket.read.shifter()
     async(function () {
         console.log('dequeuing')
@@ -91,11 +91,11 @@ Memento.prototype._socket = cadence(function (async, socket, header) {
     })
 })
 
-Memento.prototype.socket = function (conference, socket, header) {
+Addendum.prototype.socket = function (conference, socket, header) {
     this._socket(socket, header, abend)
 }
 
-Memento.prototype.set = cadence(function (async, conference, envelope) {
+Addendum.prototype.set = cadence(function (async, conference, envelope) {
     console.log(envelope)
     var node = this._nodes[envelope.body.path] = {
         value: envelope.body.value,
@@ -110,7 +110,7 @@ Memento.prototype.set = cadence(function (async, conference, envelope) {
     }
 })
 
-Memento.prototype.remove = cadence(function (async, set) {
+Addendum.prototype.remove = cadence(function (async, set) {
     var node = this.nodes[set.path]
     if (envelope.from == this.paxos.id) {
         var result = {
@@ -126,4 +126,4 @@ Memento.prototype.remove = cadence(function (async, set) {
     }
 })
 
-module.exports = Memento
+module.exports = Addendum
