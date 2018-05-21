@@ -63,19 +63,6 @@ function prove (async, okay) {
             }, async())
         }, function () {
             okay(addendums.first._token != null, 'registered')
-        }, function () {
-            // The reason we need to wait a tick to exit is because we're
-            // actually being called by the Paxos algorithm itself as it pushes
-            // an event into it's log. That invokes the event handler in
-            // Compassion's Conference object. The Compassion Conference object
-            // is not going to do anything asynchronous with this version of our
-            // tests because we've not registered any postbacks. When pushes the
-            // event onto consume it will get here where here is just before the
-            // `Destructile.destroy()` is called. `Destructible.destroy()` ruins
-            // Paxos so it can't continue to operate when it comes back from
-            // posting to it's log.
-            console.log('WOULD DESTROY')
-            setImmediate(async())
         })
     })
 }
