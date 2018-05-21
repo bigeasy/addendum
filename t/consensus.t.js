@@ -30,7 +30,7 @@ function prove (async, okay) {
         destructible.monitor('counterfeiter', Counterfeiter, {}, async())
     }, function (counterfeiter) {
         var events = counterfeiter.events.shifter()
-        addendums.first = new Addendum
+        addendums.first = new Addendum('http://127.0.0.1:8386/')
         async(function () {
             var server = http.createServer(addendums.first.reactor.middleware)
             destroyer(server)
@@ -45,13 +45,15 @@ function prove (async, okay) {
                     token: '-',
                     island: 'addendum',
                     id: 'first',
-                    url: 'http://127.0.0.1:8081/'
+                    url: 'http://127.0.0.1:8081/',
+                    join: true,
+                    arrive: true,
+                    acclimated: true
                 },
                 parse: 'json',
                 raise: true
             }, async())
             counterfeiter.events.shifter().join(function (event) {
-                console.log(event)
                 if (
                     event.type == 'consumed' &&
                     event.id == 'first' &&
@@ -63,6 +65,38 @@ function prove (async, okay) {
             }, async())
         }, function () {
             okay(addendums.first._token != null, 'registered')
+            addendums.second = new Addendum('http://127.0.0.1:8386/')
+            var server = http.createServer(addendums.second.reactor.middleware)
+            destroyer(server)
+            destructible.destruct.wait(server, 'destroy')
+            delta(destructible.monitor('second')).ee(server).on('close')
+            server.listen(8082, '127.0.0.1', async())
+        }, function () {
+            ua.fetch({
+                url: 'http://127.0.0.1:8386/register',
+                timeout: 1000,
+                post: {
+                    token: '-',
+                    island: 'addendum',
+                    id: 'second',
+                    url: 'http://127.0.0.1:8082/',
+                    join: true,
+                    arrive: true,
+                    acclimated: true
+                },
+                parse: 'json',
+                raise: true
+            }, async())
+            counterfeiter.events.shifter().join(function (event) {
+                if (
+                    event.type == 'consumed' &&
+                    event.id == 'second' &&
+                    event.body.promise == '3/0'
+                ) {
+                    return true
+                }
+                return false
+            }, async())
         })
     })
 }
