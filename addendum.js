@@ -34,10 +34,6 @@ Addendum.prototype.register = cadence(function (async, request) {
     return 200
 })
 
-Addendum.prototype.test = cadence(function (async, conference, body) {
-    console.log('GOT TEST', body)
-})
-
 Addendum.prototype.join = cadence(function (async, conference) {
     async(function () {
         this._ua.fetch({
