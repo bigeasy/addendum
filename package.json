@@ -11,6 +11,7 @@
     ],
     "author":               "Alan Gutierrez",
     "homepage":             "https://github.com/bigeasy/addendum",
+    "license":              "MIT",
     "repository":
     {
                             "type": "git",
