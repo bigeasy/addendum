@@ -72,6 +72,7 @@ Addendum.prototype.arrive = cadence(function (async, request) {
 })
 
 Addendum.prototype.acclimated = cadence(function (async, request) {
+    console.log('>>>>', request.body.government)
     this._cubbyholes.remove(request.body.government.promise)
     return 200
 })
