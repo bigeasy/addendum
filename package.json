@@ -30,7 +30,7 @@
     },
     "devDependencies":
     {
-                            "compassion.counterfeiter":     "0.15.x",
+                            "compassion.counterfeiter":     "0.16.x",
                             "proof":                        "3.0.x",
                             "server-destroy":               "1.0.1"
     },
