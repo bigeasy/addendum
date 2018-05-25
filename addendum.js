@@ -29,6 +29,10 @@ Addendum.prototype.index = cadence(function (async) {
     return [ 200, { 'content-type': 'text/plain' }, 'Addendum Consensus API\n' ]
 })
 
+Addendum.prototype.ping = cadence(function (async) {
+    return 200
+})
+
 Addendum.prototype.register = cadence(function (async, request) {
     this._token = request.body.token
     return 200
