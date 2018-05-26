@@ -17,6 +17,7 @@ function Addendum (compassionUrl) {
     this._ua = new UserAgent
     this.reactor = new Reactor(this, function (dispatcher) {
         dispatcher.dispatch('GET /', 'index')
+        dispatcher.dispatch('GET /ping', 'ping')
         dispatcher.dispatch('POST /register', 'register')
         dispatcher.dispatch('POST /arrive', 'arrive')
         dispatcher.dispatch('POST /acclimated', 'acclimated')
