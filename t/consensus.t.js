@@ -27,7 +27,18 @@ function prove (async, okay) {
     async([function () {
         destructible.destroy()
     }], function () {
-        destructible.monitor('counterfeiter', Counterfeiter, {}, async())
+        destructible.monitor('counterfeiter', Counterfeiter, {
+            ping: {
+                application: 150,
+                paxos: 150,
+                chaperon: 150
+            },
+            timeout: {
+                paxos: 450,
+                chaperon: 450,
+                http: 450
+            }
+        }, async())
     }, function (counterfeiter) {
         var events = counterfeiter.events.shifter()
         addendums.first = new Addendum('http://127.0.0.1:8386/')
@@ -48,6 +59,7 @@ function prove (async, okay) {
                     url: 'http://127.0.0.1:8081/',
                     join: true,
                     arrive: true,
+                    depart: true,
                     acclimated: true
                 },
                 parse: 'json',
@@ -82,6 +94,7 @@ function prove (async, okay) {
                     url: 'http://127.0.0.1:8082/',
                     join: true,
                     arrive: true,
+                    depart: true,
                     acclimated: true
                 },
                 parse: 'json',
@@ -97,6 +110,18 @@ function prove (async, okay) {
                 }
                 return false
             }, async())
+        }, function () {
+            counterfeiter.events.shifter().join(function (event) {
+                if (
+                    event.type == 'consumed' &&
+                    event.id == 'first' &&
+                    event.body.promise == '4/0'
+                ) {
+                    return true
+                }
+                return false
+            }, async())
+            counterfeiter.terminate('addendum', 'second')
         })
     })
 }

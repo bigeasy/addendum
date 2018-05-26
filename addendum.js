@@ -23,6 +23,7 @@ function Addendum (compassionUrl) {
         dispatcher.dispatch('POST /acclimated', 'acclimated')
         dispatcher.dispatch('POST /join', 'join')
         dispatcher.dispatch('POST /backlog', 'backlog')
+        dispatcher.dispatch('POST /depart', 'depart')
     })
 }
 
@@ -77,8 +78,9 @@ Addendum.prototype.acclimated = cadence(function (async, request) {
     return 200
 })
 
-Addendum.prototype.exile = cadence(function (async, conference, id) {
-    this._cubbys.remove(conference.government.exile.promise)
+Addendum.prototype.depart = cadence(function (async, request) {
+    this._cubbyholes.remove(request.body.departed.promise)
+    return 200
 })
 
 Addendum.prototype.set = cadence(function (async, conference, envelope) {
