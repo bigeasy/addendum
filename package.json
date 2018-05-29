@@ -26,7 +26,7 @@
                             "destructible":                 "0.28.x",
                             "prolific.logger":              "6.0.x",
                             "reactor":                      "10.2.x",
-                            "vizsla":                       "12.8.x"
+                            "vizsla":                       "12.9.x"
     },
     "devDependencies":
     {
