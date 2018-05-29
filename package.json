@@ -25,7 +25,7 @@
                             "delta":                        "1.2.x",
                             "destructible":                 "0.28.x",
                             "prolific.logger":              "6.0.x",
-                            "reactor":                      "10.2.x",
+                            "reactor":                      "10.3.x",
                             "vizsla":                       "12.9.x"
     },
     "devDependencies":
