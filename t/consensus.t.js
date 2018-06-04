@@ -1,4 +1,4 @@
-require('proof')(1, require('cadence')(prove))
+require('proof')(2, require('cadence')(prove))
 
 function prove (async, okay) {
     var Destructible = require('destructible')
@@ -77,6 +77,9 @@ function prove (async, okay) {
             }, async())
         }, function () {
             okay(addendums.first._token != null, 'registered')
+            ua.fetch({ url: 'http://127.0.0.1:8081/', parse: 'text', raise: true }, async())
+        }, function (body) {
+            okay(body, 'Addendum Consensus API\n', 'index')
             addendums.second = new Addendum('http://127.0.0.1:8386/')
             var server = http.createServer(addendums.second.reactor.middleware)
             destroyer(server)
