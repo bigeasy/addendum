@@ -1,4 +1,4 @@
-require('proof')(2, require('cadence')(prove))
+require('proof')(4, require('cadence')(prove))
 
 function prove (async, okay) {
     var Destructible = require('destructible')
@@ -60,7 +60,9 @@ function prove (async, okay) {
                     join: true,
                     arrive: true,
                     depart: true,
-                    acclimated: true
+                    acclimated: true,
+                    receive: [ 'set' ],
+                    reduced: [ 'set' ]
                 },
                 parse: 'json',
                 raise: true
@@ -98,7 +100,9 @@ function prove (async, okay) {
                     join: true,
                     arrive: true,
                     depart: true,
-                    acclimated: true
+                    acclimated: true,
+                    receive: [ 'set' ],
+                    reduced: [ 'set' ]
                 },
                 parse: 'json',
                 raise: true
@@ -114,6 +118,12 @@ function prove (async, okay) {
                 return false
             }, async())
         }, function () {
+            addendums.second.set('/path', 1, async())
+        }, function (set) {
+            okay(set, { action: 'set', value: 1 }, 'set response')
+            okay(addendums.second.nodes, {
+                '/path': { value: 1, key: '/path', createdIndex: 0, modifiedIndex: 0 }
+            }, 'set database')
             counterfeiter.events.shifter().join(function (event) {
                 if (
                     event.type == 'consumed' &&

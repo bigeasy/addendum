@@ -25,6 +25,7 @@
                             "delta":                        "1.2.x",
                             "destructible":                 "0.30.x",
                             "prolific.logger":              "6.0.x",
+                            "turnstile":                    "4.5.x",
                             "reactor":                      "10.4.x",
                             "vizsla":                       "12.9.x"
     },
