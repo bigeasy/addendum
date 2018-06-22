@@ -90,18 +90,28 @@ Addendum.prototype.depart = cadence(function (async, request) {
 
 Addendum.prototype.receiveSet = cadence(function (async, request) {
     var envelope = request.body
+    var index = this._index++
     this.nodes[envelope.body.path] = {
         value: envelope.body.value,
         key: envelope.body.path,
-        createdIndex: this._index,
-        modifiedIndex: this._index
+        createdIndex: index,
+        modifiedIndex: index
     }
-    return 200
+    return { index: index }
 })
 
 Addendum.prototype.reducedSet = cadence(function (async, request) {
     if (request.body.self.arrived == request.body.from.arrived) {
-        this._cliffhanger.resolve(request.body.request.cookie, [ null, { action: 'set', value: request.body.request.value }])
+        var index = request.body.mapped[request.body.from.arrived].index
+        this._cliffhanger.resolve(request.body.request.cookie, [ null, {
+            action: 'set',
+            node: {
+                createdIndex: index,
+                modifiedIndex: index,
+                path: request.body.request.path,
+                value: request.body.request.value
+            }
+        }])
     }
     return 200
 })

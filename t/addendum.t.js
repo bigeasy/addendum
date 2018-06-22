@@ -120,7 +120,15 @@ function prove (async, okay) {
         }, function () {
             addendums.second.set('/path', 1, async())
         }, function (set) {
-            okay(set, { action: 'set', value: 1 }, 'set response')
+            okay(set, {
+                action: 'set',
+                node: {
+                    createdIndex: 0,
+                    modifiedIndex: 0,
+                    path: '/path',
+                    value: 1
+                }
+            }, 'set response')
             okay(addendums.second.nodes, {
                 '/path': { value: 1, key: '/path', createdIndex: 0, modifiedIndex: 0 }
             }, 'set database')
