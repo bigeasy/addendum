@@ -19,4 +19,4 @@ before_install:
 
 after_script:
   - echo did I run?
-  - aws s3 sync ./coverage s3://bigeasy/addendum/$TRAVIS_JOB_ID/coverage
+  - aws s3 sync ./coverage s3://bigeasy/addendum/$TRAVIS_JOB_NUMBER/coverage
