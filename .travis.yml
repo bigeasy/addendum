@@ -20,5 +20,5 @@ before_install:
 
 after_script:
   - echo did I run?
-  - s3 sync ./coverage s3://bigeasy/test/coverage
+  - aws s3 sync ./coverage s3://bigeasy/test/coverage
   - artifacts upload --key $AWS_ACCESS_KEY_ID --secret $AWS_SECRET_ACCESS_KEY --bucket bigeasy log/ coverage/
