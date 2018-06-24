@@ -13,5 +13,6 @@ branches:
     - travis-ci
 
 before_install:
+  - curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
   - npm install --no-save --no-package-lock
   - npm install -g istanbul coveralls
