@@ -14,11 +14,9 @@ branches:
 
 before_install:
   - pip install --user awscli
-  - curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
   - npm install --no-save --no-package-lock
   - npm install -g istanbul coveralls
 
 after_script:
   - echo did I run?
-  - aws s3 sync ./coverage s3://bigeasy/test/coverage
-  - artifacts upload --key $AWS_ACCESS_KEY_ID --secret $AWS_SECRET_ACCESS_KEY --bucket bigeasy log/ coverage/
+  - aws s3 sync ./coverage s3://bigeasy/addendum/$TRAVIS_JOB_ID/coverage
