@@ -1,4 +1,4 @@
-require('proof')(4, require('cadence')(prove))
+require('proof')(5, require('cadence')(prove))
 
 function prove (async, okay) {
     var Destructible = require('destructible')
@@ -61,8 +61,8 @@ function prove (async, okay) {
                     arrive: true,
                     depart: true,
                     acclimated: true,
-                    receive: [ 'set' ],
-                    reduced: [ 'set' ]
+                    receive: [ 'set', 'remove' ],
+                    reduced: [ 'set', 'remove' ]
                 },
                 parse: 'json',
                 raise: true
@@ -101,8 +101,8 @@ function prove (async, okay) {
                     arrive: true,
                     depart: true,
                     acclimated: true,
-                    receive: [ 'set' ],
-                    reduced: [ 'set' ]
+                    receive: [ 'set', 'remove' ],
+                    reduced: [ 'set', 'remove' ]
                 },
                 parse: 'json',
                 raise: true
@@ -130,8 +130,24 @@ function prove (async, okay) {
                 }
             }, 'set response')
             okay(addendums.second.nodes, {
-                '/path': { value: 1, key: '/path', createdIndex: 0, modifiedIndex: 0 }
+                '/path': { value: 1, path: '/path', createdIndex: 0, modifiedIndex: 0 }
             }, 'set database')
+            addendums.second.remove('/path', async())
+        }, function (remove) {
+            okay(remove, {
+                action: 'remove',
+                node: {
+                    createdIndex: 0,
+                    modifiedIndex: 1,
+                    path: '/path',
+                },
+                prevNode: {
+                    createdIndex: 0,
+                    modifiedIndex: 0,
+                    path: '/path',
+                    value: 1
+                }
+            }, 'remove response')
             counterfeiter.events.shifter().join(function (event) {
                 if (
                     event.type == 'consumed' &&

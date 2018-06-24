@@ -28,6 +28,8 @@ function Addendum (compassionUrl) {
         dispatcher.dispatch('POST /backlog', 'backlog')
         dispatcher.dispatch('POST /receive/set', 'receiveSet')
         dispatcher.dispatch('POST /reduced/set', 'reducedSet')
+        dispatcher.dispatch('POST /receive/remove', 'receiveRemove')
+        dispatcher.dispatch('POST /reduced/remove', 'reducedRemove')
         dispatcher.dispatch('POST /depart', 'depart')
     })
 }
@@ -93,7 +95,7 @@ Addendum.prototype.receiveSet = cadence(function (async, request) {
     var index = this._index++
     this.nodes[envelope.body.path] = {
         value: envelope.body.value,
-        key: envelope.body.path,
+        path: envelope.body.path,
         createdIndex: index,
         modifiedIndex: index
     }
@@ -112,6 +114,37 @@ Addendum.prototype.reducedSet = cadence(function (async, request) {
                 value: request.body.request.value
             }
         }])
+    }
+    return 200
+})
+
+Addendum.prototype.receiveRemove = cadence(function (async, request) {
+    var envelope = request.body
+    var node = this.nodes[envelope.body.path]
+    delete this.nodes[envelope.body.path]
+    return { index: this._index++, prevNode: node }
+})
+
+Addendum.prototype.reducedRemove = cadence(function (async, request) {
+    if (request.body.self.arrived == request.body.from.arrived) {
+        var response = request.body.mapped[request.body.from.arrived]
+        var result = {
+            action: 'remove',
+            node: {
+                createdIndex: response.prevNode.createdIndex,
+                modifiedIndex: response.index,
+                path: request.body.request.path
+            }
+        }
+        if (response.prevNode != null) {
+            result.prevNode = {
+                createdIndex: response.prevNode.createdIndex,
+                modifiedIndex: response.prevNode.modifiedIndex,
+                path: response.prevNode.path,
+                value: response.prevNode.value
+            }
+        }
+        this._cliffhanger.resolve(request.body.request.cookie, [ null, result ])
     }
     return 200
 })
@@ -152,20 +185,14 @@ Addendum.prototype.set = cadence(function (async, path, value) {
     })
 })
 
-Addendum.prototype.remove = cadence(function (async, set) {
-    var node = this.nodes[set.path]
-    if (envelope.from == this.paxos.id) {
-        var result = {
-            action: 'delete',
-            node: {
-                createdIndex: node.createdIndex,
-                key: node.key,
-                modifiedIndex: this._index++
-            },
-            prevNode: node
+Addendum.prototype.remove = cadence(function (async, path) {
+    this.broadcaster.push({
+        method: 'remove',
+        message: {
+            path: path,
+            cookie: this._cliffhanger.invoke(async())
         }
-        this._cliffhanger.resolve(envelope.cookie, [ null, result ])
-    }
+    })
 })
 
 module.exports = Addendum
