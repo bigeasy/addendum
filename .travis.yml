@@ -19,4 +19,5 @@ before_install:
 
 after_script:
   - [[ "$TRAVIS_PULL_REQUEST" != "false" ]] && echo not false
+  - [[ "$TRAVIS_PULL_REQUEST" = "false" ]] && echo is false
   - aws s3 sync ./coverage s3://bigeasy/addendum/$TRAVIS_JOB_NUMBER/coverage
