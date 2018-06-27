@@ -3,3 +3,4 @@
 /coverage
 /docs
 /.wiseguy
+/minikube/config/*.k8s.made.json
