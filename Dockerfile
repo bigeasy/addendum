@@ -8,4 +8,4 @@ WORKDIR /home/bigeasy/addendum
 COPY package*.json .
 RUN npm install --no-package-lock --no-save --only=production
 
-COPY *.js README LICENSE .
+COPY *.js README LICENSE ./
