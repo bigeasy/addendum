@@ -1,7 +1,7 @@
-FROM bigeasy/node:10.4.1
+FROM node:alpine
 MAINTAINER Alan Gutierrez <alan@prettyrobots.com>
 
-RUN apt-get -y update && apt-get -y upgrade && apt-get install -y jq psmisc dnsutils && mkdir -p /home/bigeasy/addendum
+RUN apk update && apk upgrade && apk add bash
 
 WORKDIR /home/bigeasy/addendum
 
