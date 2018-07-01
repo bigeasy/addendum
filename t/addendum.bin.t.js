@@ -1,4 +1,4 @@
-require('proof')(2, require('cadence')(prove))
+require('proof')(3, require('cadence')(prove))
 
 function prove (async, okay) {
     var bin = require('../addendum.bin'), program
@@ -51,5 +51,16 @@ function prove (async, okay) {
         })
     }, function () {
         okay(true, 'done')
+        program = bin({
+            local: 8086,
+            compassion: 'http://127.0.0.1:8386/',
+            island: 'addendum',
+            id: 'first'
+        }, async())
+        async([function () {
+            program.ready.wait(async())
+        }, function (error) {
+            okay(error.key, 'public is required', 'required')
+        }])
     })
 }
