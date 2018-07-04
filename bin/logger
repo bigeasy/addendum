@@ -1,0 +1,7 @@
+#!/bin/sh
+
+COMPASSION=$(cd -P -- "$(dirname -- "$0")" && cd .. && printf '%s\n' "$(pwd -P)")
+
+PATH=$PATH:$COMPASSION/node_modules/.bin
+
+exec prolific stdio syslog --serializer wafer prolific.udp --bind 814

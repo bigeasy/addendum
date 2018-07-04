@@ -1,0 +1,21 @@
+#!/bin/sh
+
+COMPASSION=$(cd -P -- "$(dirname -- "$0")" && cd .. && printf '%s\n' "$(pwd -P)")
+
+PATH=$PATH:$COMPASSION/node_modules/.bin
+
+KUBERNETES_NAMESPACE=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
+
+echo 1
+
+exec echo prolific stdio -- \
+olio listen --socket '/tmp/socket' \
+    "$(olio run --workers 1 \
+        mingle --bind olio \
+        kubernetes \
+            --format 'http://%s:%d/' \
+            --kubernetes "$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+            --namespace "$KUBERNETES_NAMESPACE" \
+            --pod compassion \
+            --container compassion
+    )"
