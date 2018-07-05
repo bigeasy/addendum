@@ -32,7 +32,7 @@ console.log(JSON.stringify({
                     name: 'logger',
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
-                    command: [ '/home/bigeasy/addendum/bin/logger' ]
+                    command: [ '/app/bin/logger' ]
                 }]
             }
         }
