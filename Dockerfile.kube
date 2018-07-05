@@ -1,0 +1,11 @@
+FROM bigeasy/addendum:base
+
+RUN npm install --no-package-lock --no-save \
+    prolific@16.3.0 \
+    prolific.shuttle@18.0.1 \
+    prolific.stdio@5.0.0 \
+    prolific.syslog@7.0.0 \
+    prolific.udp@5.2.0 \
+    wafer@7.0.1
+
+COPY ./ ./
