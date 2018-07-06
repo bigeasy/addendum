@@ -19,4 +19,10 @@ olio listen --socket '/tmp/socket' \
             --namespace "$kubernetes_namespace" \
             --pod compassion \
             --container compassion
+    )" \
+    "$(olio run --workers 1 \
+        compassion colleague \
+            --local 127.0.0.1:8386 \
+            --network 8486 \
+            --discovery mingle/kubernetes \
     )"
