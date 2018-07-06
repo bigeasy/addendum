@@ -33,6 +33,11 @@ console.log(JSON.stringify({
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
                     command: [ '/app/bin/logger' ]
+                }, {
+                    name: 'compassion',
+                    image: 'bigeasy/addendum:kube',
+                    imagePullPolicy: 'Never',
+                    command: [ '/app/bin/compassion' ]
                 }]
             }
         }

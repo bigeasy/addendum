@@ -1,6 +1,8 @@
 FROM bigeasy/addendum:base
 
 RUN npm install --no-package-lock --no-save \
+    mingle@0.6.0 \
+    mingle.kubernetes@0.6.0 \
     prolific@16.3.0 \
     prolific.shuttle@18.0.1 \
     prolific.stdio@5.0.0 \

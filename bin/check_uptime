@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+
+var sought = process.argv[2]
+
+var fs = require('fs')
+
+var containerId = 'docker://' + /\n1:name=systemd:\/.*\/(.*)\n/m.exec(fs.readFileSync('/proc/self/cgroup', 'utf8'))[1]
+var since = (Date.now() - new Date(fs.statSync('/proc/1').ctime).getTime()) / 1000
+
+var proc1StartedAt = new Date(fs.statSync('/proc/1').ctime)
+
+var namespace = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/namespace', 'utf8')
+var token = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8')
+var ca = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')
+
+var http = require('https')
+
+var authority = process.env.KUBERNETES_SERVICE_HOST + ':' + process.env.KUBERNETES_SERVICE_PORT
+
+var request = http.request({
+    ca: ca,
+    host: process.env.KUBERNETES_SERVICE_HOST,
+    port: process.env.KUBERNETES_SERVICE_PORT,
+    path: '/api/v1/namespaces/' + namespace + '/pods/' + process.env.HOSTNAME,
+    headers: { authorization: 'Bearer ' + token }
+})
+
+request.on('response', function (response) {
+    var data = []
+    response.on('data', data.push.bind(data))
+    response.on('end', function () {
+        var json = JSON.parse(Buffer.concat(data).toString('utf8'))
+        var status = json.status.containerStatuses.filter(function (status) {
+            return status.name = sought
+        }).shift()
+        if (status.ready) {
+            var targetStartedAt = new Date(status.state.running.startedAt)
+            var status = json.status.containerStatuses.filter(function (status) {
+                return status.containerID = containerId
+            }).shift()
+            var kubeStartedAt = new Date(status.state.running.startedAt)
+            var skew = proc1StartedAt.getTime() - kubeStartedAt.getTime()
+            var uptime = Date.now() + skew - targetStartedAt.getTime()
+            if (uptime < process.argv[3]) {
+                console.log('uptime not reached. container: ', sought, ', skew: ', skew, ', uptime: ', uptime)
+                process.exitCode = 1
+            } else {
+                console.log('uptime reached. container: ', sought, ', skew: ', skew, ', uptime: ', uptime,
+                    ', kubernetes start: ', kubeStartedAt, ', proc 1 start: ', proc1StartedAt)
+            }
+        } else {
+            console.log(sought, 'is not ready')
+            process.exitCode = 1
+        }
+    })
+})
+
+request.end()

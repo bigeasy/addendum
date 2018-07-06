@@ -1,21 +1,22 @@
 #!/bin/sh
 
-COMPASSION=$(cd -P -- "$(dirname -- "$0")" && cd .. && printf '%s\n' "$(pwd -P)")
+source "$(dirname $(readlink -f $0))/common.sh"
 
-PATH=$PATH:$COMPASSION/node_modules/.bin
+while ! bin/check_uptime logger 3000; do
+    node -e 'setTimeout(function () {}, process.argv[1])' 256
+done
 
-KUBERNETES_NAMESPACE=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
+kubernetes_namespace=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
+kubernetes_authority=$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
 
-echo 1
-
-exec echo prolific stdio -- \
+exec prolific udp://127.0.0.1:514  -- \
 olio listen --socket '/tmp/socket' \
     "$(olio run --workers 1 \
         mingle --bind olio \
         kubernetes \
             --format 'http://%s:%d/' \
-            --kubernetes "$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
-            --namespace "$KUBERNETES_NAMESPACE" \
+            --kubernetes "$kubernetes_authority" \
+            --namespace "$kubernetes_namespace" \
             --pod compassion \
             --container compassion
     )"
