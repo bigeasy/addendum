@@ -1,3 +1,3 @@
 #!/bin/bash
 
-tar cz Dockerfile.kube *.js bin | docker build -f Dockerfile.kube -t bigeasy/addendum:kube -
+tar cz Dockerfile.kube *.js bin node_modules | docker build -f Dockerfile.kube -t bigeasy/addendum:kube -

@@ -4,4 +4,13 @@ COMPASSION=$(cd -P -- "$(dirname -- "$0")" && cd .. && printf '%s\n' "$(pwd -P)"
 
 PATH=$PATH:$COMPASSION/node_modules/.bin
 
+echo $(( `date +%s` - `stat -c %Z /proc/1` ))
+
+while ! bin/check_uptime logger 3000; do
+    echo 'wait'
+    node -e 'setTimeout(function () {}, process.argv[1])' 32
+done
+
+echo the wait is over
+
 exec prolific stdio syslog --serializer wafer prolific.udp --bind 814

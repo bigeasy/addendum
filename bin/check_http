@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+
+var port = process.argv[2]
+
+var request = http.request({
+    host: '127.0.0.1',
+    port: process.argv[2],
+    path: process.argv[3]
+})
+
+request.on('response', function (response) {
+    response.resume()
+    if (Math.floor(response.statusCode / 100) != 2) {
+        process.exitCode = 1
+    }
+})
+
+request.end()
