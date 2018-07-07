@@ -1,5 +1,7 @@
 FROM bigeasy/addendum:base
 
+RUN apk update && apk add curl
+
 RUN npm install --no-package-lock --no-save \
     compassion@1.2.0 \
     compassion.colleague@0.34.5 \

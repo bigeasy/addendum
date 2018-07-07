@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+var http = require('http')
+
 var port = process.argv[2]
 
 var request = http.request({

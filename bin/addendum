@@ -1,0 +1,12 @@
+#!/bin/sh
+
+source "$(dirname $(readlink -f $0))/common.sh"
+
+while ! bin/check_http 8386 /health; do
+    node -e 'setTimeout(function () {}, process.argv[1])' 256
+done
+
+exec prolific udp://127.0.0.1:514  -- \
+node addendum.bin.js \
+    --public 8080 --local 127.0.0.1:8088 --compassion http://127.0.0.1:8386/ \
+    --island addendum --id "$HOSTNAME"
