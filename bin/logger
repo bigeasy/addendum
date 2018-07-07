@@ -2,4 +2,4 @@
 
 source "$(dirname $(readlink -f $0))/common.sh"
 
-exec prolific stdio syslog --serializer wafer prolific.udp --bind 814
+exec prolific stdio syslog --serializer wafer prolific.udp --bind 514

@@ -37,7 +37,13 @@ console.log(JSON.stringify({
                     name: 'compassion',
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
-                    command: [ '/app/bin/compassion' ]
+                    command: [ '/app/bin/compassion' ],
+                    ports: [{ name: 'compassion', containerPort: 8486 }]
+                }, {
+                    name: 'addendum',
+                    image: 'bigeasy/addendum:kube',
+                    imagePullPolicy: 'Never',
+                    command: [ '/app/bin/addendum' ]
                 }]
             }
         }

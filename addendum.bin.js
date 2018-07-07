@@ -36,7 +36,6 @@ require('arguable')(module, require('cadence')(function (async, program) {
         program.required('local', 'public', 'compassion', 'island', 'id')
         program.validate(require('arguable/bindable'), 'public', 'local')
 
-
         program.on('shutdown', destructible.destroy.bind(destructible))
 
         destructible.completed.wait(async())
@@ -60,12 +59,14 @@ require('arguable')(module, require('cadence')(function (async, program) {
             delta(destructible.monitor('local')).ee(server).on('close')
             program.ultimate.local.listen(server, async())
         }, function () {
+            console.log('local')
             var server = http.createServer(middleware.reactor.middleware)
             destroyer(server)
             destructible.destruct.wait(server, 'destroy')
             delta(destructible.monitor('local')).ee(server).on('close')
             program.ultimate.public.listen(server, async())
         }, function () {
+            console.log('public')
             var ua = new UserAgent
             ua.fetch({
                 url: program.ultimate.compassion
@@ -76,7 +77,7 @@ require('arguable')(module, require('cadence')(function (async, program) {
                     token: '-',
                     island: 'addendum',
                     id: 'first',
-                    url: 'http://127.0.0.1:8081/',
+                    url: 'http://127.0.0.1:' + program.ultimate.local.port + '/',
                     join: true,
                     arrive: true,
                     depart: true,
@@ -87,11 +88,14 @@ require('arguable')(module, require('cadence')(function (async, program) {
                 parse: 'json',
                 raise: true
             }, async())
-        }, function () {
+        }, function (body) {
+            console.log('registered', program.ultimate.compassion, body)
             program.ready.unlatch()
             destructible.completed.wait(async())
         })
     }, function (error) {
+        console.log(error.stack)
         program.ready.unlatch(error)
+        throw error
     }])
 }))

@@ -24,14 +24,16 @@
                             "cubbyhole":                    "1.0.x",
                             "delta":                        "1.4.x",
                             "destructible":                 "0.30.x",
+                            "mingle":                       "0.7.x",
+                            "olio":                         "0.10.x",
                             "prolific.logger":              "6.0.x",
-                            "turnstile":                    "4.5.x",
                             "reactor":                      "10.4.x",
+                            "turnstile":                    "4.5.x",
                             "vizsla":                       "12.9.x"
     },
     "devDependencies":
     {
-                            "compassion.counterfeiter":     "0.19.x",
+                            "compassion.counterfeiter":     "0.20.x",
                             "proof":                        "3.0.x",
                             "server-destroy":               "1.0.1"
     },

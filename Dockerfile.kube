@@ -1,12 +1,14 @@
 FROM bigeasy/addendum:base
 
+RUN apk update && apk add curl
+
 RUN npm install --no-package-lock --no-save \
     compassion@1.2.0 \
-    compassion.colleague@0.34.5 \
-    mingle@0.6.0 \
+    compassion.colleague@0.35.0 \
+    mingle@0.7.1 \
     mingle.kubernetes@0.6.0 \
-    prolific@16.3.0 \
-    prolific.shuttle@18.0.1 \
+    prolific@16.4.0 \
+    prolific.shuttle@18.1.1 \
     prolific.stdio@5.0.0 \
     prolific.syslog@7.0.0 \
     prolific.udp@5.2.0 \
