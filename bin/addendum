@@ -6,6 +6,10 @@ while ! bin/check_http 8386 /health; do
     node -e 'setTimeout(function () {}, process.argv[1])' 256
 done
 
+echo waiting
+
+sleep 5
+
 exec prolific udp://127.0.0.1:514  -- \
 node addendum.bin.js \
     --public 8080 --local 127.0.0.1:8088 --compassion http://127.0.0.1:8386/ \

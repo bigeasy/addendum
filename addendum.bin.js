@@ -88,8 +88,8 @@ require('arguable')(module, require('cadence')(function (async, program) {
                 parse: 'json',
                 raise: true
             }, async())
-        }, function () {
-            console.log('registered')
+        }, function (body) {
+            console.log('registered', program.ultimate.compassion, body)
             program.ready.unlatch()
             destructible.completed.wait(async())
         })

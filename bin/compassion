@@ -17,7 +17,7 @@ olio listen --socket '/tmp/socket' \
             --format 'http://%s:%d/' \
             --kubernetes "$kubernetes_authority" \
             --namespace "$kubernetes_namespace" \
-            --pod compassion \
+            --pod addendum \
             --container compassion
     )" \
     "$(olio run --workers 1 \
