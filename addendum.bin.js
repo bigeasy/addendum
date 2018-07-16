@@ -25,21 +25,21 @@
     ___ . ___
 */
 require('arguable')(module, require('cadence')(function (async, program) {
+    program.helpIf(program.ultimate.help)
+
+    program.required('local', 'public', 'compassion', 'island', 'id')
+    program.validate(require('arguable/bindable'), 'public', 'local')
+
+    var cadence = require('cadence')
+
     var Destructible = require('destructible')
     var destructible = new Destructible('channel.bin')
 
-    async([function () {
-        destructible.destroy()
-    }], [function () {
-        program.helpIf(program.ultimate.help)
+    program.on('shutdown', destructible.destroy.bind(destructible))
 
-        program.required('local', 'public', 'compassion', 'island', 'id')
-        program.validate(require('arguable/bindable'), 'public', 'local')
+    destructible.completed.wait(async())
 
-        program.on('shutdown', destructible.destroy.bind(destructible))
-
-        destructible.completed.wait(async())
-
+    destructible.monitor('main', cadence(function (async, destructible) {
         var Addendum = require('./addendum')
         var Middleware = require('./middleware')
 
@@ -91,11 +91,7 @@ require('arguable')(module, require('cadence')(function (async, program) {
         }, function (body) {
             console.log('registered', program.ultimate.compassion, body)
             program.ready.unlatch()
-            destructible.completed.wait(async())
+            destructible.destruct.wait(async())
         })
-    }, function (error) {
-        console.log(error.stack)
-        program.ready.unlatch(error)
-        throw error
-    }])
+    }), program.ready.unlatch.bind(program.ready))
 }))

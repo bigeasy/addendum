@@ -51,14 +51,13 @@ function prove (async, okay) {
         })
     }, function () {
         okay(true, 'done')
-        program = bin({
-            local: 8086,
-            compassion: 'http://127.0.0.1:8386/',
-            island: 'addendum',
-            id: 'first'
-        }, async())
         async([function () {
-            program.ready.wait(async())
+            program = bin({
+                local: 8086,
+                compassion: 'http://127.0.0.1:8386/',
+                island: 'addendum',
+                id: 'first'
+            }, async())
         }, function (error) {
             okay(error.key, 'public is required', 'required')
         }])
