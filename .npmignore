@@ -1,0 +1,10 @@
+/.*
+/*.md
+/Dockerfile
+/Dockerfile.*
+/bin
+/coverage
+/docs
+/minikube
+/node_modules
+/t
