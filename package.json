@@ -23,7 +23,7 @@
                             "cliffhanger":                  "2.0.x",
                             "cubbyhole":                    "1.0.x",
                             "delta":                        "1.4.x",
-                            "destructible":                 "0.31.x",
+                            "destructible":                 "0.32.x",
                             "mingle":                       "0.8.x",
                             "olio":                         "0.11.x",
                             "prolific.logger":              "8.0.x",
