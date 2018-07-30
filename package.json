@@ -28,14 +28,14 @@
                             "olio":                         "0.11.x",
                             "prolific.logger":              "8.0.x",
                             "reactor":                      "10.4.x",
+                            "server-destroy":               "1.0.1",
                             "turnstile":                    "4.5.x",
                             "vizsla":                       "12.10.x"
     },
     "devDependencies":
     {
                             "compassion.counterfeiter":     "0.21.x",
-                            "proof":                        "3.0.x",
-                            "server-destroy":               "1.0.1"
+                            "proof":                        "3.0.x"
     },
     "bin":
     {
