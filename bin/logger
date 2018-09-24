@@ -2,4 +2,6 @@
 
 source "$(dirname $(readlink -f $0))/common.sh"
 
-exec prolific stdio syslog --serializer wafer prolific.udp --bind 514
+exec prolific --configuration /etc/prolific/logger.prolific.json \
+-- \
+prolific.udp --bind 514

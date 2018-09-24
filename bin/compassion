@@ -9,7 +9,8 @@ done
 kubernetes_namespace=$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)
 kubernetes_authority=$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
 
-exec prolific stdio udp://127.0.0.1:514  -- \
+exec prolific --configuration /etc/prolific/compassion.prolific.json \
+-- \
 olio listen --socket '/tmp/socket' \
     "$(olio run --workers 1 \
         mingle --bind olio \

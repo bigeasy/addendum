@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: addendum.prolific
+    namespace: addendum
+data:
+    logger.prolific.json: |
+        {
+            "accept": false,
+            "chain": [{
+                "path": ".",
+                "level": "notice",
+                "accept": true
+            }],
+            "pipeline": [{
+                "module": "prolific.stdio"
+            }]
+        }
+    compassion.prolific.json: |
+        {
+            "accept": false,
+            "chain": [{
+                "path": ".",
+                "level": "notice",
+                "accept": true
+            }],
+            "pipeline": [{
+                "module": "prolific.stdio"
+            }]
+        }
+    addendum.prolific.json: |
+        {
+            "accept": false,
+            "chain": [{
+                "path": ".",
+                "level": "notice",
+                "accept": true
+            }],
+            "pipeline": [{
+                "module": "prolific.stdio"
+            }]
+        }

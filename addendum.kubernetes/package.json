@@ -1,4 +1,5 @@
 {
+    "private":              true,
     "name":                 "addendum",
     "version":              "0.0.0",
     "description":
@@ -19,19 +20,16 @@
     },
     "dependencies":
     {
-                            "cadence":                      "1.0.x",
-                            "cliffhanger":                  "2.0.x",
-                            "cubbyhole":                    "1.0.x",
-                            "delta":                        "1.4.x",
-                            "destructible":                 "0.32.x",
+                            "compassion":                   "1.2.x",
+                            "compassion.colleague":         "0.36.x",
                             "mingle":                       "0.8.x",
-                            "olio":                         "0.11.x",
+                            "mingle.kubernetes":            "0.6.x",
+                            "prolific":                     "18.0.x",
                             "prolific.shuttle":             "20.0.x",
-                            "prolific.logger":              "8.0.x",
-                            "reactor":                      "10.4.x",
-                            "server-destroy":               "1.0.1",
-                            "turnstile":                    "4.5.x",
-                            "vizsla":                       "12.10.x"
+                            "prolific.stdio":               "6.0.x",
+                            "prolific.syslog":              "8.0.x",
+                            "prolific.udp":                 "6.0.x",
+                            "wafer":                        "7.0.x"
     },
     "devDependencies":
     {

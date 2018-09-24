@@ -32,19 +32,23 @@ console.log(JSON.stringify({
                     name: 'logger',
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
-                    command: [ '/app/bin/logger' ]
+                    command: [ '/app/bin/logger' ],
+                    volumeMounts: [{ name: 'prolific', mountPath: '/etc/prolific' }]
                 }, {
                     name: 'compassion',
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
                     command: [ '/app/bin/compassion' ],
-                    ports: [{ name: 'compassion', containerPort: 8486 }]
+                    ports: [{ name: 'compassion', containerPort: 8486 }],
+                    volumeMounts: [{ name: 'prolific', mountPath: '/etc/prolific' }]
                 }, {
                     name: 'addendum',
                     image: 'bigeasy/addendum:kube',
                     imagePullPolicy: 'Never',
-                    command: [ '/app/bin/addendum' ]
-                }]
+                    command: [ '/app/bin/addendum' ],
+                    volumeMounts: [{ name: 'prolific', mountPath: '/etc/prolific' }]
+                }],
+                volumes: [{ name: 'prolific', configMap: { name: 'addendum.prolific' } }]
             }
         }
     }

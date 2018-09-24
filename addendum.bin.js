@@ -52,6 +52,11 @@ require('arguable')(module, require('cadence')(function (async, program) {
 
         var UserAgent = require('vizsla')
 
+        var logger = require('prolific.logger').createLogger('x')
+        var Shuttle = require('prolific.shuttle')
+
+        Shuttle.shuttle(program, logger)
+
         async(function () {
             var server = http.createServer(addendum.reactor.middleware)
             destroyer(server)
