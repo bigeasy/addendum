@@ -36,7 +36,7 @@
     "devDependencies":
     {
                             "compassion.counterfeiter":     "0.21.x",
-                            "proof":                        "3.0.x"
+                            "proof":                        "9.0.2"
     },
     "bin":
     {
@@ -44,6 +44,6 @@
     },
     "scripts":
     {
-                            "test": "proof platform win32 && proof test t/*/*.t.js || t/test"
+                            "test": "proof t/*.t.js"
     }
 }
