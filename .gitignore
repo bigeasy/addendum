@@ -1,6 +1,5 @@
-/node_modules
-/.proof.out
+/.nyc_output
+/.wiseguy
 /coverage
 /docs
-/.wiseguy
-/minikube/config/*.k8s.made.json
+/node_modules

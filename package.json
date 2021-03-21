@@ -19,24 +19,14 @@
     },
     "dependencies":
     {
-                            "cadence":                      "1.0.x",
-                            "cliffhanger":                  "2.0.x",
-                            "cubbyhole":                    "1.0.x",
-                            "delta":                        "1.4.x",
-                            "destructible":                 "0.32.x",
-                            "mingle":                       "0.8.x",
-                            "olio":                         "0.11.x",
-                            "prolific.shuttle":             "20.0.x",
-                            "prolific.logger":              "8.0.x",
-                            "reactor":                      "10.4.x",
-                            "server-destroy":               "1.0.1",
-                            "turnstile":                    "4.5.x",
-                            "vizsla":                       "12.10.x"
+                            "cubbyhole":                    "4.0.3",
+                            "destructible":                 "7.0.0-alpha.62",
+                            "reactor":                      "17.0.0-alpha.7",
+                            "compassion":                   "2.0.0-alpha.3"
     },
     "devDependencies":
     {
-                            "compassion.counterfeiter":     "0.21.x",
-                            "proof":                        "9.0.2"
+                            "proof":                        "^9.0.3"
     },
     "bin":
     {
@@ -44,6 +34,6 @@
     },
     "scripts":
     {
-                            "test": "proof t/*.t.js"
-    }
+                            "test": "proof test/*.t.js"
+    },"main": "addendum"
 }
