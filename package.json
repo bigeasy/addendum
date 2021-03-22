@@ -3,7 +3,7 @@
     "version":              "0.0.0",
     "description":
 
-      "Database migrations for Node.js",
+      "A Paxos-based `etcd`-alike in JavaScript.",
 
     "keywords":
     [
