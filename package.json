@@ -28,7 +28,6 @@
     {
                             "proof":                        "^9.0.3"
     },
-    "main":                 "addendum",
     "bin":
     {
                             "addendum":                     "addendum.bin.js"
