@@ -1,6 +1,6 @@
 {
     "name":                 "addendum",
-    "version":              "0.0.0",
+    "version":              "0.0.1",
     "description":
 
       "A Paxos-based `etcd`-alike in JavaScript.",
@@ -19,15 +19,16 @@
     },
     "dependencies":
     {
+                            "compassion":                   "2.0.0-alpha.4",
                             "cubbyhole":                    "4.0.3",
                             "destructible":                 "7.0.0-alpha.62",
-                            "reactor":                      "17.0.0-alpha.7",
-                            "compassion":                   "2.0.0-alpha.4"
+                            "reactor":                      "17.0.0-alpha.7"
     },
     "devDependencies":
     {
                             "proof":                        "^9.0.3"
     },
+    "main":                 "addendum",
     "bin":
     {
                             "addendum":                     "addendum.bin.js"
@@ -35,5 +36,5 @@
     "scripts":
     {
                             "test": "proof test/*.t.js"
-    },"main": "addendum"
+    }
 }
