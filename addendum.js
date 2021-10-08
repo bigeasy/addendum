@@ -4,6 +4,10 @@ const assert = require('assert')
 const Cubbyhole = require('cubbyhole')
 const Reactor = require('reactor')
 
+const Conference = require('conference')
+
+const { Future } = require('perhaps')
+
 /* Just a thought.
 class Middleware extends Reactor {
     get = reaction('POST /get', async function ({ request }) {
@@ -14,111 +18,103 @@ class Middleware extends Reactor {
 
 class Addendum {
     constructor () {
-        this.nodes = {}
+        this.ready = new Future
+        this._nodes = {}
         this._index = 0
-        this._cubbyholes = new Cubbyhole
+        this._cookie = 0n
+        this._snapshots = {}
+        this._futures = {}
         this._set = new Cubbyhole
-        this._client = null
+        this.compassion = null
+        this.conference = new Conference
         this.reactor = new Reactor([{
             path: '/',
             method: 'get',
             f: this.index.bind(this)
         }, {
-            path: '/set',
-            method: 'post',
-            f: this.set.bind(this)
-        }, {
-            path: '/remove',
-            method: 'post',
-            f: this.remove.bind(this)
+            path: '/v2/keys/*',
+            method: 'put',
+            f: this.keys.bind(this)
         }])
     }
 
-    initialize (client) {
-        this._client = client
+    initialize (compassion) {
+        this.compassion = compassion
     }
 
     async bootstrap () {
     }
 
-    async join ({ snapshot }) {
-        this._index = await snapshot.shift()
-        this.nodes = await snapshot.shift()
+    async join ({ shifter }) {
+        this._index = await shifter.shift()
+        this._nodes = await shifter.shift()
         await snapshot.shift()
     }
 
+    async snapshot ({ queue, promise }) {
+        queue.push(this._snapshots[promise].index)
+        queue.push(this._snapshots[promise].nodes)
+        queue.push(null)
+    }
+
     async arrive ({ arrival }) {
-        this._cubbyholes.resolve(arrival.promise, null, {
-            nodes: JSON.parse(JSON.stringify(this.nodes)),
+        this.conference.arrive(arrival.promise)
+        this.ready.resolve(true)
+        this._snapshots[arrival.promise] = {
+            nodes: JSON.parse(JSON.stringify(this._nodes)),
             index: this._index
-        })
-    }
-
-    async acclimated ({ promise }) {
-        this._cubbyholes.remove(promise)
-    }
-
-    async depart ({ departure }) {
-        this._cubbyholes.remove(depatures.promise)
-    }
-
-    async map({ body }) {
-        switch (body.method) {
-        case 'set': {
-                const index = this._index++
-                this.nodes[body.path] = {
-                    value: body.value,
-                    path: body.path,
-                    createdIndex: index,
-                    modifiedIndex: index
-                }
-                return index
-            }
-        case 'remove': {
-                const node = this.nodes[body.path]
-                delete this.nodes[body.path]
-                return { idnex: this._index++, prevNode: node }
-            }
         }
     }
 
-    async reduce ({ mapped }) {
-        if (request.body.self.arrived == request.body.from.arrived) {
-            switch (method) {
-            case 'set': {
-                    const index = mapped[from.arrived].index
-                    this._cliffhanger.resolve(request.body.request.cookie, {
-                        action: 'set',
-                        node: {
-                            createdIndex: index,
-                            modifiedIndex: index,
-                            path: request.body.request.path,
-                            value: request.body.request.value
-                        }
-                    })
-                }
-                break
-            case 'remove': {
-                    const response = request.body.mapped[request.body.from.arrived]
-                    const result = {
-                        action: 'remove',
-                        node: {
-                            createdIndex: response.prevNode.createdIndex,
-                            modifiedIndex: response.index,
-                            path: request.body.request.path
-                        }
+    async acclimated ({ promise }) {
+        delete this._snapshots[promise]
+    }
+
+    async depart ({ departure }) {
+        delete this._snapshots[departure.promise]
+    }
+
+    async entry ({ promise, self, entry, from }) {
+        switch (entry.method) {
+        case 'map': {
+                switch (entry.body.method) {
+                case 'set': {
+                        const index = this._index++
+                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = {
+                            action: 'set',
+                            node: {
+                                value: entry.body.value,
+                                path: entry.body.path,
+                                createdIndex: index,
+                                modifiedIndex: index
+                            },
+                            prevNode: this._nodes[entry.body.path]
+                        })
                     }
-                    if (response.prevNode != null) {
-                        result.prevNode = {
-                            createdIndex: response.prevNode.createdIndex,
-                            modifiedIndex: response.prevNode.modifiedIndex,
-                            path: response.prevNode.path,
-                            value: response.prevNode.value
-                        }
+                    break
+                case 'remove': {
+                        const node = this._nodes[body.path]
+                        delete this._nodes[body.path]
+                        return { idnex: this._index++, prevNode: node }
                     }
-                    this._cliffhanger.resolve(request.body.request.cookie, result)
+                    break
                 }
-                break
+                this.compassion.enqueue({ method: 'reduce', cookie: entry.body.cookie })
+            }
+            break
+        case 'reduce': {
+                this.reduce(this.conference.reduce(self.arrived, entry.cookie, null))
+            }
+            break
+        }
+    }
+
+    reduce (reductions) {
+        for (const reduction of reductions) {
+            const future = this._futures[reduction.key]
+            if (future != null) {
+                delete this._futures[reduction.key]
+                future.resolve(reduction.map)
             }
         }
     }
@@ -127,20 +123,27 @@ class Addendum {
         return 'Addendum API\n'
     }
 
-    async set (path, value) {
-        const cookie = `${this.client.id}/${this._cookie++}`
-        const future = this._futures[cookie] = new Future
-        this.client.enqueue({ method: 'set', path, value })
-        const result = await future.promise
-        return result
+    keys (request, value) {
+        const key = request.params['*']
+        const body = request.body
+        switch (request.method) {
+        case 'PUT': {
+                const cookie = `${this.compassion.id}/${this._cookie++}`
+                const future = this._futures[cookie] = new Future
+                this.compassion.enqueue({
+                    method: 'map',
+                    body: { method: 'set', path: key, value: body.value, cookie }
+                })
+                return future.promise
+            }
+        }
     }
 
-    async remove (path) {
+    remove (path) {
         const cookie = `${this.client.id}/${this._cookie++}`
         const future = this._futures[cookie] = new Future
-        this.client.enqueue({ method: 'remove', path })
-        const result = await future.promise
-        return result
+        this.compassion.enqueue({ method: 'remove', path, cookie })
+        return future.promise
     }
 }
 

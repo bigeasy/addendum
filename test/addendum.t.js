@@ -1,4 +1,7 @@
-require('proof')(1, async okay => {
+require('proof')(2, async okay => {
+    const url = require('url')
+    const qs = require('qs')
+
     const Addendum = require('..')
     const addendum = new Addendum
 
@@ -17,21 +20,26 @@ require('proof')(1, async okay => {
         }
 
         get url () {
-            return `http://${this.addresses.addendum.address}:${this.addresses.addendum.port}`
+            return {
+                compassion: `http://${this.addresses.compassion.address}:${this.addresses.compassion.port}`,
+                addendum: `http://${this.addresses.addendum.address}:${this.addresses.addendum.port}`
+            }
         }
 
         static async create (destructible, census) {
             const addendum = new Addendum
             const addresses = {
                 compassion: null,
-                addensum: null
+                addendum: null
             }
             addresses.compassion = await Compassion.listen(destructible.durable('compassion'), {
                 census: census,
                 applications: { addendum },
                 bind: { host: '127.0.0.1', port: 0 }
             })
-            addresses.addendum = await addendum.reactor.fastify.listen({ host: '127.0.0.1', port: 0 })
+            const fastify = addendum.reactor.fastify
+            fastify.register(require('fastify-formbody'))
+            addresses.addendum = await fastify.listen({ host: '127.0.0.1', port: 0 })
             destructible.destruct(() => destructible.ephemeral('close', () => addendum.reactor.fastify.close()))
             addresses.addendum = addendum.reactor.fastify.server.address()
             return new Participant(addendum, addresses)
@@ -40,10 +48,30 @@ require('proof')(1, async okay => {
 
     destructible.ephemeral('test', async () => {
         const census = new Queue()
-        const first = await Participant.create(destructible.durable('addendum.1'), census.shifter())
+        const participants = []
+        participants.push(await Participant.create(destructible.durable('addendum.1'), census.shifter()))
+        census.push([ participants[0].url.compassion ])
+        await participants[0].addendum.ready.promise
         {
-            const response = await axios.get(first.url)
+            const response = await axios.get(participants[0].url.addendum)
             okay(response.data, 'Addendum API\n', 'index')
+        }
+        {
+            const response = await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ value: 'x' }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    path: 'x',
+                    value: 'x',
+                    createdIndex: 0,
+                    modifiedIndex: 0
+                }
+            }, 'set')
         }
         destructible.destroy()
         census.push(null)
