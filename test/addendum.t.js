@@ -1,4 +1,4 @@
-require('proof')(2, async okay => {
+require('proof')(3, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -66,7 +66,30 @@ require('proof')(2, async okay => {
             okay(response.data, {
                 action: 'set',
                 node: {
-                    path: 'x',
+                    key: '/x',
+                    value: 'x',
+                    createdIndex: 0,
+                    modifiedIndex: 0
+                }
+            }, 'set')
+        }
+        {
+            const response = await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ value: 'y' }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/x',
+                    value: 'y',
+                    createdIndex: 0,
+                    modifiedIndex: 1
+                },
+                prevNode: {
+                    key: '/x',
                     value: 'x',
                     createdIndex: 0,
                     modifiedIndex: 0

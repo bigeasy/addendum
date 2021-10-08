@@ -8,6 +8,8 @@ const Conference = require('conference')
 
 const { Future } = require('perhaps')
 
+const Log = require('./log')
+
 /* Just a thought.
 class Middleware extends Reactor {
     get = reaction('POST /get', async function ({ request }) {
@@ -20,6 +22,7 @@ class Addendum {
     constructor () {
         this.ready = new Future
         this._nodes = {}
+        this.log = new Log(1000)
         this._index = 0
         this._cookie = 0n
         this._snapshots = {}
@@ -80,16 +83,20 @@ class Addendum {
                 switch (entry.body.method) {
                 case 'set': {
                         const index = this._index++
-                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = {
+                        const response = {
                             action: 'set',
                             node: {
                                 value: entry.body.value,
-                                path: entry.body.path,
+                                key: '/' + entry.body.path,
                                 createdIndex: index,
                                 modifiedIndex: index
                             },
-                            prevNode: this._nodes[entry.body.path]
-                        })
+                        }
+                        if (entry.body.path in this._nodes) {
+                            response.prevNode = this._nodes[entry.body.path].node
+                            response.node.createdIndex = response.prevNode.createdIndex
+                        }
+                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = this.log.add(response))
                     }
                     break
                 case 'remove': {

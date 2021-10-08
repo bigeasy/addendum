@@ -1,4 +1,14 @@
 class Log {
+    static equal (left, right) {
+        return left.length == right.length &&
+            left.every((element, index) => element == right[index])
+    }
+
+    static startsWith (array, startsWith) {
+        return array.length <= startsWith &&
+            startsWith.every((element, index) => element == array[index])
+    }
+
     constructor (max) {
         this.size = 0
         this.length = 0
