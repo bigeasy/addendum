@@ -22,7 +22,7 @@
                             "compassion":                   "2.0.0-alpha.18",
                             "cubbyhole":                    "4.0.8",
                             "destructible":                 "7.0.0-alpha.70",
-                            "reactor":                      "17.0.0-alpha.10"
+                            "reactor":                      "17.0.0-alpha.14"
     },
     "devDependencies":
     {
