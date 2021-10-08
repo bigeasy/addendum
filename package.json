@@ -19,10 +19,10 @@
     },
     "dependencies":
     {
-                            "compassion":                   "2.0.0-alpha.8",
-                            "cubbyhole":                    "4.0.6",
-                            "destructible":                 "7.0.0-alpha.67",
-                            "reactor":                      "17.0.0-alpha.11"
+                            "compassion":                   "2.0.0-alpha.18",
+                            "cubbyhole":                    "4.0.8",
+                            "destructible":                 "7.0.0-alpha.70",
+                            "reactor":                      "17.0.0-alpha.10"
     },
     "devDependencies":
     {
