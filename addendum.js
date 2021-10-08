@@ -38,6 +38,10 @@ class Addendum {
             path: '/v2/keys/*',
             method: 'put',
             f: this.keys.bind(this)
+        }, {
+            path: '/v2/keys/*',
+            method: 'delete',
+            f: this.keys.bind(this)
         }])
     }
 
@@ -82,7 +86,7 @@ class Addendum {
         case 'map': {
                 switch (entry.body.method) {
                 case 'set': {
-                        const index = this._index++
+                        const index = this.log.length
                         const response = {
                             action: 'set',
                             node: {
@@ -90,7 +94,7 @@ class Addendum {
                                 key: '/' + entry.body.path,
                                 createdIndex: index,
                                 modifiedIndex: index
-                            },
+                            }
                         }
                         if (entry.body.path in this._nodes) {
                             response.prevNode = this._nodes[entry.body.path].node
@@ -99,10 +103,23 @@ class Addendum {
                         this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = this.log.add(response))
                     }
                     break
-                case 'remove': {
-                        const node = this._nodes[body.path]
-                        delete this._nodes[body.path]
-                        return { idnex: this._index++, prevNode: node }
+                case 'delete': {
+                        const index = this.log.length
+                        const response = {
+                            action: 'delete',
+                            node: {
+                                value: entry.body.value,
+                                key: '/' + entry.body.path,
+                                createdIndex: index,
+                                modifiedIndex: index
+                            }
+                        }
+                        if (entry.body.path in this._nodes) {
+                            response.prevNode = this._nodes[entry.body.path].node
+                            response.node.createdIndex = response.prevNode.createdIndex
+                        }
+                        delete this._nodes[entry.body.path]
+                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = this.log.add(response))
                     }
                     break
                 }
@@ -140,6 +157,15 @@ class Addendum {
                 this.compassion.enqueue({
                     method: 'map',
                     body: { method: 'set', path: key, value: body.value, cookie }
+                })
+                return future.promise
+            }
+        case 'DELETE': {
+                const cookie = `${this.compassion.id}/${this._cookie++}`
+                const future = this._futures[cookie] = new Future
+                this.compassion.enqueue({
+                    method: 'map',
+                    body: { method: 'delete', path: key, cookie }
                 })
                 return future.promise
             }

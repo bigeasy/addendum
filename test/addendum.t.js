@@ -1,4 +1,4 @@
-require('proof')(3, async okay => {
+require('proof')(4, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -94,7 +94,27 @@ require('proof')(3, async okay => {
                     createdIndex: 0,
                     modifiedIndex: 0
                 }
-            }, 'set')
+            }, 'overwrite')
+        }
+        {
+            const response = await axios({
+                method: 'DELETE',
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+            })
+            okay(response.data, {
+                action: 'delete',
+                node: {
+                    key: '/x',
+                    createdIndex: 0,
+                    modifiedIndex: 2
+                },
+                prevNode: {
+                    key: '/x',
+                    value: 'y',
+                    createdIndex: 0,
+                    modifiedIndex: 1
+                }
+            }, 'delete')
         }
         destructible.destroy()
         census.push(null)
