@@ -127,7 +127,7 @@ class Addendum {
             }
             break
         case 'reduce': {
-                this.reduce(this.conference.reduce(self.arrived, entry.cookie, null))
+                this.reduce(this.conference.reduce(entry.cookie, self.arrived, null))
             }
             break
         }
