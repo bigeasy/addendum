@@ -20,13 +20,13 @@
             <div id="jump_page">
 
 
-                <a class="source" href="addendum.bin.js.html">
-                  addendum.bin.js
+                <a class="source" href="addendum.js.html">
+                  addendum.js
                 </a>
 
 
-                <a class="source" href="addendum.js.html">
-                  addendum.js
+                <a class="source" href="log.js.html">
+                  log.js
                 </a>
 
             </div>
@@ -53,142 +53,915 @@
 
             </div>
 
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> cadence = <span class="hljs-built_in">require</span>(<span class="hljs-string">'cadence'</span>)
-<span class="hljs-keyword">var</span> logger = <span class="hljs-built_in">require</span>(<span class="hljs-string">'prolific.logger'</span>).createLogger(<span class="hljs-string">'addendum'</span>)
-<span class="hljs-keyword">var</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">'crypto'</span>)
-<span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
-<span class="hljs-keyword">var</span> Cubbyhole = <span class="hljs-built_in">require</span>(<span class="hljs-string">'cubbyhole'</span>)
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;crypto&#x27;</span>)
+<span class="hljs-keyword">const</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;assert&#x27;</span>)</pre></div></div>
 
-<span class="hljs-keyword">var</span> Reactor = <span class="hljs-built_in">require</span>(<span class="hljs-string">'reactor'</span>)
+        </li>
 
-<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Addendum</span> (<span class="hljs-params">cliffhanger, nodes</span>) </span>{
-    <span class="hljs-keyword">this</span>._nodes = nodes
-    <span class="hljs-keyword">this</span>._index = <span class="hljs-number">0</span>
-    <span class="hljs-keyword">this</span>._cliffhanger = cliffhanger
-    <span class="hljs-keyword">this</span>._stores = {}
-    <span class="hljs-keyword">this</span>._cubbyholes = <span class="hljs-keyword">new</span> Cubbyhole
-    <span class="hljs-keyword">this</span>.reactor = <span class="hljs-keyword">new</span> Reactor(<span class="hljs-keyword">this</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">dispatcher</span>) </span>{
-        dispatcher.dispatch(<span class="hljs-string">'GET /'</span>, <span class="hljs-string">'index'</span>)
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Return the first value that is not null-like.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">const</span> { coalesce } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;extant&#x27;</span>)
+
+<span class="hljs-keyword">const</span> Cubbyhole = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;cubbyhole&#x27;</span>)
+<span class="hljs-keyword">const</span> Reactor = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;reactor&#x27;</span>)
+
+<span class="hljs-keyword">const</span> Conference = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;conference&#x27;</span>)
+
+<span class="hljs-keyword">const</span> { Calendar, Timer } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;happenstance&#x27;</span>)
+
+<span class="hljs-keyword">const</span> { Future } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;perhaps&#x27;</span>)
+
+<span class="hljs-keyword">const</span> Log = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./log&#x27;</span>)
+
+<span class="hljs-comment">/* Just a thought.
+class Middleware extends Reactor {
+    get = reaction(&#x27;POST /get&#x27;, async function ({ request }) {
+        return 400
     })
 }
+*/</span>
 
-Addendum.prototype.index = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async</span>) </span>{
-    <span class="hljs-keyword">return</span> [ <span class="hljs-number">200</span>, { <span class="hljs-string">'content-type'</span>: <span class="hljs-string">'text/plain'</span> }, <span class="hljs-string">'Addendum Consensus API\n'</span> ]
-})
-
-Addendum.prototype.test = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference, body</span>) </span>{
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'GOT TEST'</span>, body)
-})
-
-Addendum.prototype.join = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference</span>) </span>{
-    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-        <span class="hljs-keyword">var</span> socket = <span class="hljs-literal">null</span>, shifter = <span class="hljs-literal">null</span>
-        <span class="hljs-keyword">if</span> (!conference.replaying) {
-            socket = conference.socket({ <span class="hljs-attr">promise</span>: conference.government.promise })
-            socket.write.push(<span class="hljs-literal">null</span>)
-            shifter = socket.read.shifter()
-        }
-        <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-            conference.record(<span class="hljs-keyword">async</span>)(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-                shifter.dequeue(<span class="hljs-keyword">async</span>())
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Addendum</span> </span>{
+    <span class="hljs-title">constructor</span> (<span class="hljs-params">destructible</span>) {
+        <span class="hljs-built_in">this</span>.ready = <span class="hljs-keyword">new</span> Future
+        <span class="hljs-built_in">this</span>._nodes = {}
+        <span class="hljs-built_in">this</span>.log = <span class="hljs-keyword">new</span> Log(<span class="hljs-number">1000</span>)
+        <span class="hljs-built_in">this</span>._index = <span class="hljs-number">0</span>
+        <span class="hljs-built_in">this</span>._cookie = <span class="hljs-number">0n</span>
+        <span class="hljs-built_in">this</span>._snapshots = {}
+        <span class="hljs-built_in">this</span>._futures = {}
+        <span class="hljs-built_in">this</span>._set = <span class="hljs-keyword">new</span> Cubbyhole
+        <span class="hljs-built_in">this</span>.compassion = <span class="hljs-literal">null</span>
+        <span class="hljs-built_in">this</span>.calendar = <span class="hljs-keyword">new</span> Calendar
+        <span class="hljs-keyword">const</span> timer = <span class="hljs-keyword">new</span> Timer(<span class="hljs-built_in">this</span>.calendar)
+        destructible.destruct(<span class="hljs-function">() =&gt;</span> timer.destroy())
+        <span class="hljs-built_in">this</span>.calendar.on(<span class="hljs-string">&#x27;data&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">{ key, body: { cookie }}</span>) =&gt;</span> {
+            <span class="hljs-built_in">this</span>.compassion.enqueue({
+                <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;reduce&#x27;</span>,
+                <span class="hljs-attr">cookie</span>: cookie,
+                <span class="hljs-attr">body</span>: { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;ttl&#x27;</span>, <span class="hljs-attr">reset</span>: <span class="hljs-literal">false</span> }
             })
-        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">envelope</span>) </span>{
-            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'JOIN'</span>, envelope)
-            assert(envelope.module == <span class="hljs-string">'addendum'</span> &amp;&amp; envelope.method == <span class="hljs-string">'index'</span>)
-            <span class="hljs-keyword">this</span>._index = envelope.body
         })
-        <span class="hljs-keyword">var</span> loop = <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-            conference.record(<span class="hljs-keyword">async</span>)(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-                shifter.dequeue(<span class="hljs-keyword">async</span>())
-            })
-        }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">envelope</span>) </span>{
-            <span class="hljs-keyword">if</span> (envelope == <span class="hljs-literal">null</span>) {
-                <span class="hljs-keyword">return</span> [ loop.break ]
+        <span class="hljs-built_in">this</span>.conference = <span class="hljs-keyword">new</span> Conference
+        <span class="hljs-built_in">this</span>.reactor = <span class="hljs-keyword">new</span> Reactor([{
+            <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/&#x27;</span>,
+            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;get&#x27;</span>,
+            <span class="hljs-attr">raw</span>: <span class="hljs-literal">true</span>,
+            <span class="hljs-attr">f</span>: <span class="hljs-built_in">this</span>.index.bind(<span class="hljs-built_in">this</span>)
+        }, {
+            <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/v2/keys/*&#x27;</span>,
+            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;get&#x27;</span>,
+            <span class="hljs-attr">f</span>: <span class="hljs-built_in">this</span>.get.bind(<span class="hljs-built_in">this</span>)
+        }, {
+            <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/v2/keys/*&#x27;</span>,
+            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;put&#x27;</span>,
+            <span class="hljs-attr">f</span>: <span class="hljs-built_in">this</span>.keys.bind(<span class="hljs-built_in">this</span>)
+        }, {
+            <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/v2/keys/*&#x27;</span>,
+            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;delete&#x27;</span>,
+            <span class="hljs-attr">f</span>: <span class="hljs-built_in">this</span>.keys.bind(<span class="hljs-built_in">this</span>)
+        }])
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-3">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>The <code>initialize</code> method sets the Compassion object for this instance of
+Addendum, a Compassion based application.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    initialize (compassion) {
+        <span class="hljs-built_in">this</span>.compassion = compassion
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-4">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Called after initialize when the instance is the first and only instance
+of the consensus. Would perform any initialization but none is necessary
+for Addendum.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-5">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> bootstrap () {
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-6">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Called when a new participant joins with the promise at which they
+joined. We will already have received the arrive message for the new
+instance and made a snapshot of the state of common data at the moment of
+arrival prior to any modifications made by arrival.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-7">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>We transmit the snapshot of the common data through an
+<a href="https://github.com/bigeasy/avenue">Avenue</a> queue. The Avenue queue
+allows us to stream the snapshot data from this participant to the
+joining participant.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-8">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> snapshot ({ queue, promise }) {
+        queue.push(<span class="hljs-built_in">this</span>._snapshots[promise].index)
+        queue.push(<span class="hljs-built_in">this</span>._snapshots[promise].nodes)
+        queue.push(<span class="hljs-literal">null</span>)
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-9">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Called when a new participant after the the first participant arrives
+with the other end of the queue from the <code>snapshot</code> side.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-10">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> join ({ shifter }) {
+        <span class="hljs-built_in">this</span>._index = <span class="hljs-keyword">await</span> shifter.shift()
+        <span class="hljs-built_in">this</span>._nodes = <span class="hljs-keyword">await</span> shifter.shift()
+        <span class="hljs-keyword">await</span> snapshot.shift()
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-11">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p><strong>TODO</strong> <code>arrvial.promise</code> should be <code>arrival.arrived</code>.
+When we have a new arrival we add its arrival promise to the <code>Conference</code>
+so the <code>Conference</code> has an accurate census of participants. We then take
+a snapshot of the current state of the application in case we’re asked to
+provide a snapshot for the new participant. Finally, we mark oursleves as
+<code>ready</code> since the first arrival we receive will be for ourselves.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-12">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> arrive ({ arrival }) {
+        <span class="hljs-built_in">this</span>.conference.arrive(arrival.promise)
+        <span class="hljs-built_in">this</span>._snapshots[arrival.promise] = {
+            <span class="hljs-attr">nodes</span>: <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-built_in">this</span>._nodes)),
+            <span class="hljs-attr">index</span>: <span class="hljs-built_in">this</span>._index
+        }
+        <span class="hljs-keyword">if</span> (! <span class="hljs-built_in">this</span>.ready.fulfilled) {
+            <span class="hljs-built_in">this</span>.ready.resolve(<span class="hljs-literal">true</span>)
+        }
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-13">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>We will get an acclimated message after an arriving participant has
+received an arrival message for itself. At that point we can assume that
+the participant has read its snapshot in <code>join</code> and performed any
+additional initialization in the <code>arrive</code>. We delete the snapshot we took
+in <code>arrive</code> since we will no longer need it.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-14">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> acclimated ({ promise }) {
+        <span class="hljs-keyword">delete</span> <span class="hljs-built_in">this</span>._snapshots[promise]
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-15">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>On departure we remove the participant from the <code>Conference</code> by the
+arrival promise. When we remove it from the <code>Conference</code> we may trigger a
+reduction, zero, one or more map/reduce calls may have been complete
+except for this departing participant. We also delete any snapshot we
+might be holding in case the participant departed before it acclimated.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-16">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> depart ({ departure }) {
+        <span class="hljs-built_in">this</span>.reduce(<span class="hljs-built_in">this</span>.conference.depart(departure.promise))
+        <span class="hljs-keyword">delete</span> <span class="hljs-built_in">this</span>._snapshots[departure.promise]
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-17">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>When we get a new entry it is either a <code>&quot;map&quot;</code> message or a <code>&quot;reduce&quot;</code>
+message.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-18">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">async</span> entry ({ promise, self, entry, <span class="hljs-keyword">from</span> }) {
+        <span class="hljs-keyword">switch</span> (entry.method) {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-19">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Response to a message that has been enqueued by a specific
+participant and requires an acknowledgement from all participants.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;map&#x27;</span>: {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-20">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>We now switch on the specific message we want to map.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">switch</span> (entry.body.method) {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-21">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>The <code>&quot;set&quot;</code> message indicates that we want to set a key/value.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;set&#x27;</span>: {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-22">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>If we already have a ttl set for this key we need to notify the
+other participants that it is going to be reset.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-keyword">const</span> ttl = <span class="hljs-built_in">this</span>.calendar.what(entry.body.path)
+                        <span class="hljs-keyword">if</span> (ttl != <span class="hljs-literal">null</span>) {
+                            <span class="hljs-built_in">this</span>.compassion.enqueue({ <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;ttl&#x27;</span>, <span class="hljs-attr">cookie</span>: ttl.cookie, <span class="hljs-attr">reset</span>: <span class="hljs-literal">true</span> })
+                        }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-23">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>If we have ttl in this set requeset, we schedule the timeout for
+the TTL and map a cookie so we can countdown all the timers or
+cancelations of all the participants before actually deleting.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-keyword">if</span> (entry.body.ttl != <span class="hljs-literal">null</span>) {
+                            <span class="hljs-keyword">const</span> cookie = <span class="hljs-string">`<span class="hljs-subst">${entry.body.cookie}</span>-ttl`</span>
+                            <span class="hljs-built_in">this</span>.calendar.schedule(<span class="hljs-built_in">Date</span>.now() + <span class="hljs-number">1000</span> * entry.body.ttl, entry.body.path, { cookie })
+                            <span class="hljs-built_in">this</span>.conference.map(cookie, { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;ttl&#x27;</span>, <span class="hljs-attr">key</span>: entry.body.path })
+                        }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-24">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>Create our response message.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-keyword">const</span> index = <span class="hljs-built_in">this</span>.log.length
+                        <span class="hljs-keyword">const</span> response = {
+                            <span class="hljs-attr">action</span>: <span class="hljs-string">&#x27;set&#x27;</span>,
+                            <span class="hljs-attr">node</span>: {
+                                <span class="hljs-attr">value</span>: entry.body.value,
+                                <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;/&#x27;</span> + entry.body.path,
+                                <span class="hljs-attr">createdIndex</span>: index,
+                                <span class="hljs-attr">modifiedIndex</span>: index
+                            }
+                        }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-25">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Add the previous node if any.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-keyword">if</span> (entry.body.path <span class="hljs-keyword">in</span> <span class="hljs-built_in">this</span>._nodes) {
+                            response.prevNode = <span class="hljs-built_in">this</span>._nodes[entry.body.path].node
+                            response.node.createdIndex = response.prevNode.createdIndex
+                        }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-26">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Set the key.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-built_in">this</span>._nodes[entry.body.path] = <span class="hljs-built_in">this</span>.log.add(response)</pre></div></div>
+
+        </li>
+
+
+        <li id="section-27">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>We want to map the set request and at the end of this function
+will will send a reduce message to let other participants know
+that we’ve received it so that the participant that accepted the
+HTTP request can send a response.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                        <span class="hljs-built_in">this</span>.conference.map(entry.body.cookie, {
+                            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;edit&#x27;</span>,
+                            <span class="hljs-attr">body</span>: <span class="hljs-built_in">this</span>._nodes[entry.body.path]
+                        })
+                    }
+                    <span class="hljs-keyword">break</span>
+                <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;delete&#x27;</span>: {
+                        <span class="hljs-keyword">const</span> index = <span class="hljs-built_in">this</span>.log.length
+                        <span class="hljs-keyword">const</span> response = {
+                            <span class="hljs-attr">action</span>: <span class="hljs-string">&#x27;delete&#x27;</span>,
+                            <span class="hljs-attr">node</span>: {
+                                <span class="hljs-attr">value</span>: entry.body.value,
+                                <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;/&#x27;</span> + entry.body.path,
+                                <span class="hljs-attr">createdIndex</span>: index,
+                                <span class="hljs-attr">modifiedIndex</span>: index
+                            }
+                        }
+                        <span class="hljs-keyword">if</span> (entry.body.path <span class="hljs-keyword">in</span> <span class="hljs-built_in">this</span>._nodes) {
+                            response.prevNode = <span class="hljs-built_in">this</span>._nodes[entry.body.path].node
+                            response.node.createdIndex = response.prevNode.createdIndex
+                        }
+                        <span class="hljs-keyword">delete</span> <span class="hljs-built_in">this</span>._nodes[entry.body.path]
+                        <span class="hljs-built_in">this</span>.conference.map(entry.body.cookie, {
+                            <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;edit&#x27;</span>,
+                            <span class="hljs-attr">body</span>: <span class="hljs-built_in">this</span>.log.add(response)
+                        })
+                    }
+                    <span class="hljs-keyword">break</span>
+                }
+                <span class="hljs-built_in">this</span>.compassion.enqueue({ <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;reduce&#x27;</span>, <span class="hljs-attr">cookie</span>: entry.body.cookie, <span class="hljs-attr">body</span>: <span class="hljs-literal">null</span> })
             }
-            assert(envelope.module == <span class="hljs-string">'addendum'</span> &amp;&amp; envelope.method == <span class="hljs-string">'subscription'</span>)
-            <span class="hljs-keyword">this</span>._node[envelope.body.path] = envelope.body.node
-        })()
-    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'----&gt; JOINED'</span>, { <span class="hljs-attr">index</span>: <span class="hljs-keyword">this</span>._index, <span class="hljs-attr">nodes</span>: <span class="hljs-keyword">this</span>._nodes })
-    })
-})
+            <span class="hljs-keyword">break</span>
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;reduce&#x27;</span>: {
+                <span class="hljs-built_in">this</span>.reduce(<span class="hljs-built_in">this</span>.conference.reduce(entry.cookie, self.arrived, entry.body))
+            }
+            <span class="hljs-keyword">break</span>
+        }
+    }</pre></div></div>
 
-Addendum.prototype.immigrate = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference, id</span>) </span>{
-    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'IMMIGRATE'</span>, id)
-    <span class="hljs-keyword">this</span>._cubbyholes.set(conference.government.promise, <span class="hljs-literal">null</span>, {
-        <span class="hljs-attr">nodes</span>: <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>._nodes)),
-        <span class="hljs-attr">index</span>: <span class="hljs-keyword">this</span>._index
-    })
-})
+        </li>
 
-Addendum.prototype.naturalized = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference, promise</span>) </span>{
-    <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._cubbyholes.remove(promise)
-})
 
-Addendum.prototype.exile = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference, id</span>) </span>{
-    <span class="hljs-keyword">this</span>._cubbys.remove(conference.government.exile.promise)
-})
+        <li id="section-28">
+            <div class="annotation">
 
-Addendum.prototype._socket = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, socket, header</span>) </span>{
-    <span class="hljs-keyword">var</span> shifter = socket.read.shifter()
-    <span class="hljs-keyword">async</span>(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'dequeuing'</span>)
-        shifter.dequeue(<span class="hljs-keyword">async</span>())
-    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">envelope</span>) </span>{
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'dequeued'</span>)
-        assert(envelope == <span class="hljs-literal">null</span>, <span class="hljs-string">'there should be no message body'</span>)
-       <span class="hljs-keyword">this</span>._cubbyholes.wait(header.promise, <span class="hljs-keyword">async</span>())
-    }, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">store</span>) </span>{
-        socket.write.push({
-            <span class="hljs-attr">module</span>: <span class="hljs-string">'addendum'</span>,
-            <span class="hljs-attr">method</span>: <span class="hljs-string">'index'</span>,
-            <span class="hljs-attr">body</span>: store.index
-        })
-        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> path <span class="hljs-keyword">in</span> store.nodes) {
-            socket.write.push({
-                <span class="hljs-attr">module</span>: <span class="hljs-string">'addendum'</span>,
-                <span class="hljs-attr">method</span>: <span class="hljs-string">'index'</span>,
-                <span class="hljs-attr">body</span>: { <span class="hljs-attr">path</span>: path, <span class="hljs-attr">node</span>: store.nodes[path] }
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-29">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>You’ll note that I’m using a lot of <code>switch</code>/<code>case</code> in this application.
+It is my preference to see the logic layed out in this way. It is not
+always thus. Compassion itself could simply be a queue of messages for
+you to <code>switch</code> through, but I’ve organized those messages into a series
+of events that can be documented through an interface.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-30">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>But I have no qualms about <code>switch</code>/<code>case</code> and find it an appropriate
+expression for message handling. Earlier I build map/reduce into
+Compassion itself with a <code>map</code> and <code>reduce</code> function instead of <code>entry</code>,
+but quickly found that it was at a different layer of abstraction. For
+example, how do you reduce in response to the mapping or an arrival or
+departure? Thus, entry now has nested <code>switch</code> statments inside a <code>&quot;map&quot;</code>
+and <code>&quot;reduce&quot;</code>  <code>switch</code> allowing for the application that has a
+as-of-yet developed notion of how to use an atomic log.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-31">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <hr>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-32">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-33">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>We call this function with the result of <code>this.conference.reduce()</code> which
+returns an array of “reductions,” objects that contain a map value and an
+object containing the reduce response from each of the participants.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-34">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    reduce (reductions) {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-35">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>For each reduction we switch on the name of the method in the mapped
+object.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> reduction <span class="hljs-keyword">of</span> reductions) {
+            <span class="hljs-keyword">switch</span> (reduction.map.method) {</pre></div></div>
+
+        </li>
+
+
+        <li id="section-36">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>In the case of edit we look for a future that is the HTTP call
+that is waiting on all of the participants to write the edit.
+There will only be one participant that received the HTTP call so
+there will be only one participant that has a future to resolve.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;edit&#x27;</span>: {
+                    <span class="hljs-keyword">const</span> future = <span class="hljs-built_in">this</span>._futures[reduction.key]
+                    <span class="hljs-keyword">if</span> (future != <span class="hljs-literal">null</span>) {
+                        <span class="hljs-keyword">delete</span> <span class="hljs-built_in">this</span>._futures[reduction.key]
+                        future.resolve(reduction.map.body)
+                    }
+                }
+                <span class="hljs-keyword">break</span></pre></div></div>
+
+        </li>
+
+
+        <li id="section-37">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>In the case of TTL, every one of the participants has taken
+action on a TTL setting for a key. Each participant has either
+recieved a timer notification that a TTL has expired or else has
+recieved a message to update the TTL or delete the key. Only if
+all paritcipants have recived a timer notification do we delete
+the key according to the TTL. If any participant tells us to
+ignore the TTL because it reset it we do not delete the key.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;ttl&#x27;</span>: {
+                    <span class="hljs-keyword">if</span> (! Conference.toArray(reduction).reduce(<span class="hljs-function">(<span class="hljs-params">reset, reduction</span>) =&gt;</span> {
+                        <span class="hljs-keyword">return</span> reset || reduction.value.reset
+                    }, <span class="hljs-literal">false</span>)) {
+                        <span class="hljs-keyword">delete</span> <span class="hljs-built_in">this</span>._nodes[reduction.map.key]
+                    }
+                }
+                <span class="hljs-keyword">break</span>
+            }
+        }
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-38">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>About TTL: in the above you can see how we handle a race condition using
+the atomic log. If we have three participants and two have a TTL timer
+fire for a key, but the third processes a <code>set</code> message that extends the
+TTL timer, then we’re going to have inconsistent state across the
+mirrored state of the application.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-39">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>The timer is outside of the atomic log and the participant could be at a
+different point in atomic log processing when the timer fires.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-40">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-40">&#182;</a>
+              </div>
+              <p>We solve this using map/reduce and running the TTL deletion as a result
+of a reduction. Every participant has to have inserted a timer expiration
+into the atomic log. If a participant has processed a set or delete prior
+to the timer firing it will reset the timer and enter a reset message
+into the atomic log. The other participants will have logged timer
+messages, but they will not have deleted the key. Thus when they see that
+one of the participants has reset the TTL they ignore the TTL
+reduction and the atomic log entry that reset the key for the one will
+soon arrive for all and they will all maintain the same mirrored state.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-41">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-41">&#182;</a>
+              </div>
+              <hr>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-42">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-42">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>
+    index () {
+        <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Addendum API\n&#x27;</span>
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-43">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-43">&#182;</a>
+              </div>
+              <p>When we have a get request we send the value of the current participant.
+We do not run any messages through the atomic log. Your application may
+require that reads be ordered as well as writes. It doesn’t appear that
+this is necessary for <code>etcd</code>.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-44">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-44">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    get (request, reply) {
+        <span class="hljs-keyword">const</span> key = request.params[<span class="hljs-string">&#x27;*&#x27;</span>]
+        <span class="hljs-keyword">const</span> node = <span class="hljs-built_in">this</span>._nodes[key]
+        <span class="hljs-keyword">if</span> (node == <span class="hljs-literal">null</span>) {
+            reply.code(<span class="hljs-number">404</span>)
+            reply.send({
+                <span class="hljs-attr">errorCode</span>:<span class="hljs-number">100</span>,
+                <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Key not found&#x27;</span>,
+                <span class="hljs-attr">cause</span>: <span class="hljs-string">&#x27;/&#x27;</span> + key,
+                <span class="hljs-attr">index</span>: <span class="hljs-built_in">this</span>.log.index
             })
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> {
+                <span class="hljs-attr">action</span>: <span class="hljs-string">&#x27;get&#x27;</span>,
+                <span class="hljs-attr">node</span>: node
+            }
         }
-        socket.write.push(<span class="hljs-literal">null</span>)
-    })
-})
+    }</pre></div></div>
 
-Addendum.prototype.socket = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">conference, socket, header</span>) </span>{
-    <span class="hljs-keyword">this</span>._socket(socket, header, abend)
+        </li>
+
+
+        <li id="section-45">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-45">&#182;</a>
+              </div>
+              <p>Our HTTP ingress for key requests. The request is enqueued into the
+atomic log from the participant that handled the request in a <code>&quot;map&quot;</code>
+message. These will be handled in the <code>entry</code> method above. We create a
+Promise (Future wraps a Promise) to await the map/reduce. The reduce will
+ensure that all participants have written the value.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-46">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-46">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    keys (request) {
+        <span class="hljs-keyword">const</span> key = request.params[<span class="hljs-string">&#x27;*&#x27;</span>]
+        <span class="hljs-keyword">const</span> body = request.body
+        <span class="hljs-keyword">switch</span> (request.method) {
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;PUT&#x27;</span>: {
+                <span class="hljs-keyword">const</span> cookie = <span class="hljs-string">`<span class="hljs-subst">${<span class="hljs-built_in">this</span>.compassion.id}</span>/<span class="hljs-subst">${<span class="hljs-built_in">this</span>._cookie++}</span>`</span>
+                <span class="hljs-keyword">const</span> future = <span class="hljs-built_in">this</span>._futures[cookie] = <span class="hljs-keyword">new</span> Future
+                <span class="hljs-built_in">this</span>.compassion.enqueue({
+                    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;map&#x27;</span>,
+                    <span class="hljs-attr">body</span>: {
+                        <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;set&#x27;</span>,
+                        <span class="hljs-attr">path</span>: key,
+                        <span class="hljs-attr">value</span>: body.value,
+                        <span class="hljs-attr">ttl</span>: coalesce(body.ttl),
+                        cookie
+                    }
+                })
+                <span class="hljs-keyword">return</span> future.promise
+            }
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;DELETE&#x27;</span>: {
+                <span class="hljs-keyword">const</span> cookie = <span class="hljs-string">`<span class="hljs-subst">${<span class="hljs-built_in">this</span>.compassion.id}</span>/<span class="hljs-subst">${<span class="hljs-built_in">this</span>._cookie++}</span>`</span>
+                <span class="hljs-keyword">const</span> future = <span class="hljs-built_in">this</span>._futures[cookie] = <span class="hljs-keyword">new</span> Future
+                <span class="hljs-built_in">this</span>.compassion.enqueue({
+                    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;map&#x27;</span>,
+                    <span class="hljs-attr">body</span>: { <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;delete&#x27;</span>, <span class="hljs-attr">path</span>: key, cookie }
+                })
+                <span class="hljs-keyword">return</span> future.promise
+            }
+        }
+    }
 }
-
-Addendum.prototype.set = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, conference, envelope</span>) </span>{
-    <span class="hljs-built_in">console</span>.log(envelope)
-    <span class="hljs-keyword">var</span> node = <span class="hljs-keyword">this</span>._nodes[envelope.body.path] = {
-        <span class="hljs-attr">value</span>: envelope.body.value,
-        <span class="hljs-attr">key</span>: envelope.body.path,
-        <span class="hljs-attr">createdIndex</span>: <span class="hljs-keyword">this</span>._index,
-        <span class="hljs-attr">modifiedIndex</span>: <span class="hljs-keyword">this</span>._index
-    }
-    <span class="hljs-keyword">this</span>._index++
-    <span class="hljs-keyword">if</span> (envelope.from == conference.id) {
-        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'RESOLVING!'</span>)
-        <span class="hljs-keyword">this</span>._cliffhanger.resolve(envelope.cookie, [ <span class="hljs-literal">null</span>, { <span class="hljs-attr">action</span>: <span class="hljs-string">'set'</span>, <span class="hljs-attr">node</span>: node }])
-    }
-})
-
-Addendum.prototype.remove = cadence(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">async, set</span>) </span>{
-    <span class="hljs-keyword">var</span> node = <span class="hljs-keyword">this</span>.nodes[set.path]
-    <span class="hljs-keyword">if</span> (envelope.from == <span class="hljs-keyword">this</span>.paxos.id) {
-        <span class="hljs-keyword">var</span> result = {
-            <span class="hljs-attr">action</span>: <span class="hljs-string">'delete'</span>,
-            <span class="hljs-attr">node</span>: {
-                <span class="hljs-attr">createdIndex</span>: node.createdIndex,
-                <span class="hljs-attr">key</span>: node.key,
-                <span class="hljs-attr">modifiedIndex</span>: <span class="hljs-keyword">this</span>._index++
-            },
-            <span class="hljs-attr">prevNode</span>: node
-        }
-        <span class="hljs-keyword">this</span>._cliffhanger.resolve(envelope.cookie, [ <span class="hljs-literal">null</span>, result ])
-    }
-})
 
 <span class="hljs-built_in">module</span>.exports = Addendum</pre></div></div>
 
