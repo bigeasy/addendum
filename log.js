@@ -17,6 +17,10 @@ class Log {
         this.head.next = this.head.previous = this.head
     }
 
+    get index () {
+        return this.length - 1
+    }
+
     add (event) {
         const node = {
             index: this.length++,

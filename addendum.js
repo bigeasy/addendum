@@ -1,10 +1,15 @@
 const crypto = require('crypto')
 const assert = require('assert')
 
+// Return the first value that is not null-like.
+const { coalesce } = require('extant')
+
 const Cubbyhole = require('cubbyhole')
 const Reactor = require('reactor')
 
 const Conference = require('conference')
+
+const { Calendar, Timer } = require('happenstance')
 
 const { Future } = require('perhaps')
 
@@ -19,7 +24,7 @@ class Middleware extends Reactor {
 */
 
 class Addendum {
-    constructor () {
+    constructor (destructible) {
         this.ready = new Future
         this._nodes = {}
         this.log = new Log(1000)
@@ -29,11 +34,26 @@ class Addendum {
         this._futures = {}
         this._set = new Cubbyhole
         this.compassion = null
+        this.calendar = new Calendar
+        const timer = new Timer(this.calendar)
+        destructible.destruct(() => timer.destroy())
+        this.calendar.on('data', ({ key, body: { cookie }}) => {
+            this.compassion.enqueue({
+                method: 'reduce',
+                cookie: cookie,
+                body: { method: 'ttl', ignore: false }
+            })
+        })
         this.conference = new Conference
         this.reactor = new Reactor([{
             path: '/',
             method: 'get',
+            raw: true,
             f: this.index.bind(this)
+        }, {
+            path: '/v2/keys/*',
+            method: 'get',
+            f: this.get.bind(this)
         }, {
             path: '/v2/keys/*',
             method: 'put',
@@ -81,11 +101,43 @@ class Addendum {
         delete this._snapshots[departure.promise]
     }
 
+    reduce (reductions) {
+        for (const reduction of reductions) {
+            switch (reduction.map.method) {
+            case 'edit': {
+                    const future = this._futures[reduction.key]
+                    if (future != null) {
+                        delete this._futures[reduction.key]
+                        future.resolve(reduction.map.body)
+                    }
+                }
+                break
+            case 'ttl': {
+                    if (! Conference.toArray(reduction).reduce((ignore, reduction) => {
+                        return ignore || reduction.value.ignore
+                    }, false)) {
+                        delete this._nodes[reduction.map.key]
+                    }
+                }
+                break
+            }
+        }
+    }
+
     async entry ({ promise, self, entry, from }) {
         switch (entry.method) {
         case 'map': {
                 switch (entry.body.method) {
                 case 'set': {
+                        const ttl = this.calendar.what(entry.body.path)
+                        if (ttl != null) {
+                            this.compassion.enqueue({ method: 'ttl', cookie: ttl.cookie, ignore: true })
+                        }
+                        if (entry.body.ttl != null) {
+                            const cookie = `${entry.body.cookie}-ttl`
+                            this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
+                            this.conference.map(cookie, { method: 'ttl', key: entry.body.path })
+                        }
                         const index = this.log.length
                         const response = {
                             action: 'set',
@@ -100,7 +152,10 @@ class Addendum {
                             response.prevNode = this._nodes[entry.body.path].node
                             response.node.createdIndex = response.prevNode.createdIndex
                         }
-                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = this.log.add(response))
+                        this.conference.map(entry.body.cookie, {
+                            method: 'edit',
+                            body: this._nodes[entry.body.path] = this.log.add(response)
+                        })
                     }
                     break
                 case 'delete': {
@@ -119,27 +174,20 @@ class Addendum {
                             response.node.createdIndex = response.prevNode.createdIndex
                         }
                         delete this._nodes[entry.body.path]
-                        this.conference.map(entry.body.cookie, this._nodes[entry.body.path] = this.log.add(response))
+                        this.conference.map(entry.body.cookie, {
+                            method: 'edit',
+                            body: this.log.add(response)
+                        })
                     }
                     break
                 }
-                this.compassion.enqueue({ method: 'reduce', cookie: entry.body.cookie })
+                this.compassion.enqueue({ method: 'reduce', cookie: entry.body.cookie, body: null })
             }
             break
         case 'reduce': {
-                this.reduce(this.conference.reduce(entry.cookie, self.arrived, null))
+                this.reduce(this.conference.reduce(entry.cookie, self.arrived, entry.body))
             }
             break
-        }
-    }
-
-    reduce (reductions) {
-        for (const reduction of reductions) {
-            const future = this._futures[reduction.key]
-            if (future != null) {
-                delete this._futures[reduction.key]
-                future.resolve(reduction.map)
-            }
         }
     }
 
@@ -147,7 +195,26 @@ class Addendum {
         return 'Addendum API\n'
     }
 
-    keys (request, value) {
+    get (request, reply) {
+        const key = request.params['*']
+        const node = this._nodes[key]
+        if (node == null) {
+            reply.code(404)
+            reply.send({
+                errorCode:100,
+                message: 'Key not found',
+                cause: '/' + key,
+                index: this.log.index
+            })
+        } else {
+            return {
+                action: 'get',
+                node: node
+            }
+        }
+    }
+
+    keys (request) {
         const key = request.params['*']
         const body = request.body
         switch (request.method) {
@@ -156,7 +223,13 @@ class Addendum {
                 const future = this._futures[cookie] = new Future
                 this.compassion.enqueue({
                     method: 'map',
-                    body: { method: 'set', path: key, value: body.value, cookie }
+                    body: {
+                        method: 'set',
+                        path: key,
+                        value: body.value,
+                        ttl: coalesce(body.ttl),
+                        cookie
+                    }
                 })
                 return future.promise
             }

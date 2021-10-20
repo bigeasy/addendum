@@ -1,9 +1,8 @@
-require('proof')(4, async okay => {
+require('proof')(8, async okay => {
     const url = require('url')
     const qs = require('qs')
 
     const Addendum = require('..')
-    const addendum = new Addendum
 
     const axios = require('axios')
 
@@ -27,7 +26,7 @@ require('proof')(4, async okay => {
         }
 
         static async create (destructible, census) {
-            const addendum = new Addendum
+            const addendum = new Addendum(destructible.durable('addendum'))
             const addresses = {
                 compassion: null,
                 addendum: null
@@ -46,7 +45,7 @@ require('proof')(4, async okay => {
         }
     }
 
-    destructible.ephemeral('test', async () => {
+    destructible.durable('test', async () => {
         const census = new Queue()
         const participants = []
         participants.push(await Participant.create(destructible.durable('addendum.1'), census.shifter()))
@@ -115,6 +114,63 @@ require('proof')(4, async okay => {
                     modifiedIndex: 1
                 }
             }, 'delete')
+        }
+        {
+            const response = await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ value: 'x', ttl: 1 }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/x',
+                    value: 'x',
+                    createdIndex: 3,
+                    modifiedIndex: 3
+                }
+            }, 'set with ttl')
+        }
+        {
+            const response = await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ value: 'x', ttl: 1 }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/x',
+                    value: 'x',
+                    createdIndex: 3,
+                    modifiedIndex: 4
+                },
+                prevNode: {
+                    key: '/x',
+                    value: 'x',
+                    createdIndex: 3,
+                    modifiedIndex: 3
+                }
+            }, 'reset with ttl')
+        }
+        {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            try {
+                await axios({
+                    method: 'GET',
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
+                })
+            } catch (error) {
+                okay(error.response.status, 404, 'get ttl deleted')
+                okay(error.response.data, {
+                    errorCode: 100,
+                    message: 'Key not found',
+                    cause: '/x',
+                    index: 4
+                }, 'get ttl deleted body')
+            }
         }
         destructible.destroy()
         census.push(null)
