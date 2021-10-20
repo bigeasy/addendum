@@ -62,3 +62,11 @@ node test/readme.t.js
 //{ "name": "test" }
 okay('TODO')
 ```
+
+## Project Purpose and Status
+
+This living `README.md` is a template, but the usage of Addendum is not as
+interesting as Addendum itself. It's an example of how to build an application
+with the Paxos-backed atomic log Compassion. Read through the [annotated
+Docco](https://bigeasy.github.io/addendum/docco/addendum.js.html)
+for an understanding of message ordering and map/reduce.
