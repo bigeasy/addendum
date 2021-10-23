@@ -1,4 +1,4 @@
-require('proof')(8, async okay => {
+require('proof')(13, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -47,6 +47,7 @@ require('proof')(8, async okay => {
 
     destructible.durable('test', async () => {
         const census = new Queue()
+        destructible.destruct(() => census.push(null))
         const participants = []
         participants.push(await Participant.create(destructible.durable('addendum.1'), census.shifter()))
         census.push([ participants[0].url.compassion ])
@@ -119,6 +120,119 @@ require('proof')(8, async okay => {
             const response = await axios({
                 method: 'PUT',
                 headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ dir: true }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/hello/dolly/oh/hello',
+                    dir: true,
+                    createdIndex: 3,
+                    modifiedIndex: 3
+                },
+            }, 'create directory')
+        }
+        {
+            const response = await axios({
+                method: 'GET',
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello')
+            })
+            okay(response.data, {
+                action: 'get',
+                node: {
+                    key: '/hello/dolly/oh/hello',
+                    dir: true,
+                    createdIndex: 3,
+                    modifiedIndex: 3
+                },
+            }, 'list empty directory')
+        }
+        {
+            const response = []
+            try {
+                await axios({
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify({ value: 'x' }),
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello')
+                })
+            } catch (error) {
+                response.push({
+                    statusCode: error.response.status,
+                    body: error.response.data
+                })
+            }
+            okay(response.shift(), {
+                statusCode: 403,
+                body: {
+                    statusCode: 102,
+                    message: 'Not a file',
+                    cause: '/hello/dolly/oh/hello',
+                    index: 3
+                }
+            }, 'create file over directory')
+        }
+        {
+            const response = []
+            try {
+                await axios({
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify({ dir: true }),
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello')
+                })
+            } catch (error) {
+                response.push({
+                    statusCode: error.response.status,
+                    body: error.response.data
+                })
+            }
+            okay(response.shift(), {
+                statusCode: 403,
+                body: {
+                    statusCode: 102,
+                    message: 'Not a file',
+                    cause: '/hello/dolly/oh/hello',
+                    index: 3
+                }
+            }, 'create directory over directory')
+        }
+        {
+            await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify({ value: 'x' }),
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/world')
+            })
+            const response = []
+            try {
+                await axios({
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify({ value: 'x' }),
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/world/hello')
+                })
+            } catch (error) {
+                response.push({
+                    statusCode: error.response.status,
+                    body: error.response.data
+                })
+            }
+            okay(response.shift(), {
+                statusCode: 403,
+                body: {
+                    statusCode: 104,
+                    message: 'Not a directory',
+                    cause: '/hello/world',
+                    index: 4
+                }
+            }, 'create file with file in path')
+        }
+        {
+            const response = await axios({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
                 data: qs.stringify({ value: 'x', ttl: 1 }),
                 url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
             })
@@ -127,8 +241,8 @@ require('proof')(8, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 3,
-                    modifiedIndex: 3
+                    createdIndex: 5,
+                    modifiedIndex: 5
                 }
             }, 'set with ttl')
         }
@@ -144,31 +258,32 @@ require('proof')(8, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 3,
-                    modifiedIndex: 4
+                    createdIndex: 5,
+                    modifiedIndex: 6
                 },
                 prevNode: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 3,
-                    modifiedIndex: 3
+                    createdIndex: 5,
+                    modifiedIndex: 5
                 }
             }, 'reset with ttl')
         }
         {
             await new Promise(resolve => setTimeout(resolve, 2000))
             try {
-                await axios({
+                const got = await axios({
                     method: 'GET',
                     url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
                 })
+                console.log(got.data)
             } catch (error) {
                 okay(error.response.status, 404, 'get ttl deleted')
                 okay(error.response.data, {
                     errorCode: 100,
                     message: 'Key not found',
                     cause: '/x',
-                    index: 4
+                    index: 6
                 }, 'get ttl deleted body')
             }
         }

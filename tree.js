@@ -1,7 +1,22 @@
 const WildMap = require('wildmap')
 const { Queue } = require('avenue')
+const AddendumError = require('./error')
 
 class Tree {
+    static Error = class {
+        constructor (code, cause) {
+            this.code = code
+            this.cause = cause
+        }
+
+        message (index) {
+            return {
+                statusCode: this.code,
+                cause: this.cause,
+            }
+        }
+    }
+
     constructor () {
         this.wildmap = new WildMap
         this.events = new Queue
@@ -20,7 +35,7 @@ class Tree {
         }
     }
 
-    check (key, dir, index) {
+    check (key, dir) {
         for (let i = 1, I = key.length - 1; i < I; i++) {
             const dir = key.slice(0, i)
             const got = this.wildmap.get(dir)
@@ -28,21 +43,20 @@ class Tree {
                 return
             }
             if (! got.dir) {
-                throw [ 104, dir.join('/') ]
+                throw new AddendumError(403, 104, dir.join('/'))
             }
         }
         const got = this.wildmap.get(key)
         if (got != null && got.dir != dir) {
             if (dir) {
-                throw [ 104, dir.join('/') ]
+                throw new AddendumError(403, 104, key.join('/'))
             } else {
-                throw [ 102, dir.join('/') ]
+                throw new AddendumError(403, 102, key.join('/'))
             }
         }
     }
 
     set (key, value) {
-        this.check(key, false)
         this._mkdir(key.slice(0, key.length - 1))
         this.wildmap.set(key, { dir: false, value: value })
     }
@@ -60,9 +74,6 @@ class Tree {
         if (got == null) {
             return null
         }
-        if (got.dir) {
-            throw [ 104, key.join('/') ]
-        }
         return got.value
     }
 
@@ -73,8 +84,7 @@ class Tree {
     }
 
     mkdir (key) {
-        this.check(key, true)
-        this._mkidr(key)
+        this._mkdir(key)
     }
 
     remove (key) {

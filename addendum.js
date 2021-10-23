@@ -13,8 +13,12 @@ const { Calendar, Timer } = require('happenstance')
 
 const { Future } = require('perhaps')
 
+const rescue = require('rescue')
+
 const Log = require('./log')
-const Tree = require('./tree')
+const WildMap = require('wildmap')
+
+const AddendumError = require('./error')
 
 /* Just a thought.
 class Middleware extends Reactor {
@@ -28,7 +32,7 @@ class Addendum {
     constructor (destructible) {
         this.ready = new Future
         this.log = new Log(1000)
-        this._tree = new Tree
+        this._wildmap = new WildMap
         this._index = 0
         this._cookie = 0n
         this._snapshots = {}
@@ -49,7 +53,6 @@ class Addendum {
         this.reactor = new Reactor([{
             path: '/',
             method: 'get',
-            raw: true,
             f: this.index.bind(this)
         }, {
             path: '/v2/keys/*',
@@ -103,6 +106,9 @@ class Addendum {
     //
     async join ({ shifter }) {
         this._index = await shifter.shift()
+        for (const { key, value } of (await shifter.shift())) {
+            this._wildmap.set(key, value)
+        }
         this._nodes = await shifter.shift()
         await snapshot.shift()
     }
@@ -118,7 +124,10 @@ class Addendum {
     async arrive ({ arrival }) {
         this.conference.arrive(arrival.promise)
         this._snapshots[arrival.promise] = {
-            nodes: this._tree.snapshot(),
+            nodes: this._wildmap.glob([ '', this._wildmap.recursive ])
+                .map(key => ({ key, body: this._wildmap.get(key) }))
+                .filter(({ key, body }) => { console.log(key, body); return ! body.dir })
+                .map(({ key, body }) => ({ key: key.join('/'), value: body.value })),
             index: this._index
         }
         if (! this.ready.fulfilled) {
@@ -158,79 +167,144 @@ class Addendum {
         // Response to a message that has been enqueued by a specific
         // participant and requires an acknowledgement from all participants.
         case 'map': {
-                // We now switch on the specific message we want to map.
-                switch (entry.body.method) {
-                // The `"set"` message indicates that we want to set a key/value.
-                case 'set': {
-                        const path = `/${entry.body.path}`
-                        const key = path.split('/')
-                        // If we already have a ttl set for this key we need to notify the
-                        // other participants that it is going to be reset.
-                        const ttl = this.calendar.what(entry.body.path)
-                        if (ttl != null) {
-                            this.compassion.enqueue({ method: 'ttl', cookie: ttl.cookie, reset: true })
-                        }
-                        // If we have ttl in this set requeset, we schedule the timeout for
-                        // the TTL and map a cookie so we can countdown all the timers or
-                        // cancelations of all the participants before actually deleting.
-                        if (entry.body.ttl != null) {
-                            const cookie = `${entry.body.cookie}-ttl`
-                            this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
-                            this.conference.map(cookie, { method: 'ttl', key: key })
-                        }
-                        // Create our response message.
-                        const index = this.log.length
-                        const response = {
-                            action: 'set',
-                            node: {
-                                value: entry.body.value,
-                                key: path,
-                                createdIndex: index,
-                                modifiedIndex: index
+                try {
+                    // We now switch on the specific message we want to map.
+                    switch (entry.body.method) {
+                    // The `"set"` message indicates that we want to set a key/value.
+                    case 'set': {
+                            // Create a path from the Fastify pattern match.
+                            const path = `/${entry.body.path}`
+                            // Create a key from the path.
+                            const key = path.split('/')
+                            // Ensure that the directory path is all directories or that it has
+                            // not yet been created.
+                            for (let i = 1, I = key.length; i < I; i++) {
+                                const dir = key.slice(0, i)
+                                const got = this._wildmap.get(dir)
+                                if (got == null) {
+                                    break
+                                }
+                                if (! got.dir) {
+                                    throw new AddendumError(403, 104, dir.join('/'))
+                                }
                             }
-                        }
-                        // Add the previous node if any.
-                        const got = this._tree.get(key)
-                        if (got != null) {
-                            response.prevNode = got.node
-                            response.node.createdIndex = response.prevNode.createdIndex
-                        }
-                        // Log the entry.
-                        this.log.add(response)
-                        // Set the key.
-                        this._tree.set(key, response)
-                        // We want to map the set request and at the end of this function
-                        // will will send a reduce message to let other participants know
-                        // that we've received it so that the participant that accepted the
-                        // HTTP request can send a response.
-                        this.conference.map(entry.body.cookie, { method: 'edit', body: response })
-                    }
-                    break
-                case 'delete': {
-                        const index = this.log.length
-                        const path = `/${entry.body.path}`
-                        const response = {
-                            action: 'delete',
-                            node: {
-                                value: entry.body.value,
-                                key: path,
-                                createdIndex: index,
-                                modifiedIndex: index
+                            const check = this._wildmap.get(key)
+                            if (check != null && check.dir != entry.body.dir) {
+                                if (entry.body.dir) {
+                                    throw new AddendumError(403, 104, key.join('/'))
+                                } else {
+                                    throw new AddendumError(403, 102, key.join('/'))
+                                }
                             }
+                            // What do we got there now?
+                            const got = this._wildmap.get(key)
+                            // We can overwrite a file with a dir but not a dir with a dir.
+                            if (got != null) {
+                                if (got.dir && entry.body.dir) {
+                                    throw new AddendumError(403, 102, key.join('/'))
+                                }
+                            }
+                            // If we already have a ttl set for this key we need to notify the
+                            // other participants that it is going to be reset.
+                            const ttl = this.calendar.what(entry.body.path)
+                            if (ttl != null) {
+                                this.compassion.enqueue({ method: 'ttl', cookie: ttl.cookie, reset: true })
+                            }
+                            // If we have ttl in this set requeset, we schedule the timeout for
+                            // the TTL and map a cookie so we can countdown all the timers or
+                            // cancelations of all the participants before actually deleting.
+                            if (entry.body.ttl != null) {
+                                const cookie = `${entry.body.cookie}-ttl`
+                                this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
+                                this.conference.map(cookie, { method: 'ttl', key: key })
+                            }
+                            // Create our response message.
+                            const index = this.log.length
+                            const response = {
+                                action: 'set',
+                                node: {
+                                    key: path,
+                                    createdIndex: index,
+                                    modifiedIndex: index
+                                }
+                            }
+                            if (entry.body.dir) {
+                                response.node.dir = entry.body.dir
+                            } else {
+                                response.node.value = entry.body.value
+                            }
+                            if (got != null) {
+                                response.prevNode = got.node
+                                response.node.createdIndex = response.prevNode.createdIndex
+                            }
+                            // Log the entry.
+                            this.log.add(response)
+                            const wildmap = this._wildmap
+                            for (let i = 1, I = key.length; i != I; i++) {
+                                const got = wildmap.get(key.slice(0, i))
+                                if (got == null) {
+                                    wildmap.set(key.slice(0, i), {
+                                        dir: true,
+                                        node: {
+                                            key: key.slice(0, i).join('/'),
+                                            dir: true,
+                                            createdIndex: this.log.index,
+                                            modifiedIndex: this.log.index
+                                        }
+                                    })
+                                }
+                            }
+                            // Set the key.
+                            if (entry.body.dir) {
+                                wildmap.set(key, { dir: true, node: response.node })
+                            } else {
+                                wildmap.set(key, { dir: false, node: response.node })
+                            }
+                            // We want to map the set request and at the end of this function
+                            // will will send a reduce message to let other participants know
+                            // that we've received it so that the participant that accepted the
+                            // HTTP request can send a response.
+                            this.conference.map(entry.body.cookie, { method: 'edit', response: [ 200, response ] })
                         }
-                        const key = path.split('/')
-                        const got = this._tree.get(key)
-                        if (got != null) {
-                            response.prevNode = got.node
-                            response.node.createdIndex = response.prevNode.createdIndex
+                        break
+                    case 'delete': {
+                            const index = this.log.length
+                            const path = `/${entry.body.path}`
+                            const response = {
+                                action: 'delete',
+                                node: {
+                                    value: entry.body.value,
+                                    key: path,
+                                    createdIndex: index,
+                                    modifiedIndex: index
+                                }
+                            }
+                            const key = path.split('/')
+                            const got = this._wildmap.get(key)
+                            if (got != null) {
+                                response.prevNode = got.node
+                                response.node.createdIndex = response.prevNode.createdIndex
+                            }
+                            // Log the entry.
+                            this.log.add(response)
+                            // Remove the key.
+                            this._wildmap.remove(key)
+                            this.conference.map(entry.body.cookie, {
+                                method: 'edit',
+                                response: [ 200, response ],
+                                headers: {
+                                    'X-Etcd-Index': this.log.index
+                                }
+                            })
                         }
-                        this._tree.remove(key)
-                        this.conference.map(entry.body.cookie, {
-                            method: 'edit',
-                            body: this.log.add(response)
-                        })
+                        break
                     }
-                    break
+                } catch (error) {
+                    rescue(error, [ AddendumError ])
+                    this.conference.map(entry.body.cookie, {
+                        method: 'edit',
+                        response: error.response(this.log.index)
+                    })
                 }
                 this.compassion.enqueue({ method: 'reduce', cookie: entry.body.cookie, body: null })
             }
@@ -278,7 +352,7 @@ class Addendum {
                     const future = this._futures[reduction.key]
                     if (future != null) {
                         delete this._futures[reduction.key]
-                        future.resolve(reduction.map.body)
+                        future.resolve(reduction.map.response)
                     }
                 }
                 break
@@ -293,7 +367,7 @@ class Addendum {
                     if (! Conference.toArray(reduction).reduce((reset, reduction) => {
                         return reset || reduction.value.reset
                     }, false)) {
-                        this._tree.remove(reduction.map.key)
+                        this._wildmap.remove(reduction.map.key)
                     }
                 }
                 break
@@ -335,18 +409,36 @@ class Addendum {
     get (request, reply) {
         const path = `/${request.params['*']}`
         const key = path.split('/')
-        const node = this._tree.get(key)
-        if (node == null) {
-            throw [ 404, {
+        const got = this._wildmap.get(key)
+        if (got == null) {
+            return [ 404, {
                 errorCode:100,
                 message: 'Key not found',
                 cause: key.join('/'),
                 index: this.log.index
+            }, {
+                'X-Etcd-Index': this.log.index
             } ]
+        }
+        if (got.dir) {
+            const listing = this._wildmap.glob(key.concat(this._wildmap.single))
+            if (listing.length == 0) {
+                return [ 200, {
+                    action: 'get',
+                    node: got.node
+                }, {
+                    'X-Etcd-Index': this.log.index
+                }]
+            }
+            console.log(got)
+            process.exit()
+            return {
+                action: 'get'
+            }
         }
         return {
             action: 'get',
-            node: node
+            node: got.node
         }
     }
 
@@ -371,6 +463,7 @@ class Addendum {
                         path: key,
                         value: body.value,
                         ttl: coalesce(body.ttl),
+                        dir: body.dir == 'true',
                         cookie
                     }
                 })
