@@ -14,6 +14,7 @@ const { Calendar, Timer } = require('happenstance')
 const { Future } = require('perhaps')
 
 const Log = require('./log')
+const Tree = require('./tree')
 
 /* Just a thought.
 class Middleware extends Reactor {
@@ -26,8 +27,8 @@ class Middleware extends Reactor {
 class Addendum {
     constructor (destructible) {
         this.ready = new Future
-        this._nodes = {}
         this.log = new Log(1000)
+        this._tree = new Tree
         this._index = 0
         this._cookie = 0n
         this._snapshots = {}
@@ -117,7 +118,7 @@ class Addendum {
     async arrive ({ arrival }) {
         this.conference.arrive(arrival.promise)
         this._snapshots[arrival.promise] = {
-            nodes: JSON.parse(JSON.stringify(this._nodes)),
+            nodes: this._tree.snapshot(),
             index: this._index
         }
         if (! this.ready.fulfilled) {
@@ -161,6 +162,8 @@ class Addendum {
                 switch (entry.body.method) {
                 // The `"set"` message indicates that we want to set a key/value.
                 case 'set': {
+                        const path = `/${entry.body.path}`
+                        const key = path.split('/')
                         // If we already have a ttl set for this key we need to notify the
                         // other participants that it is going to be reset.
                         const ttl = this.calendar.what(entry.body.path)
@@ -173,7 +176,7 @@ class Addendum {
                         if (entry.body.ttl != null) {
                             const cookie = `${entry.body.cookie}-ttl`
                             this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
-                            this.conference.map(cookie, { method: 'ttl', key: entry.body.path })
+                            this.conference.map(cookie, { method: 'ttl', key: key })
                         }
                         // Create our response message.
                         const index = this.log.length
@@ -181,44 +184,47 @@ class Addendum {
                             action: 'set',
                             node: {
                                 value: entry.body.value,
-                                key: '/' + entry.body.path,
+                                key: path,
                                 createdIndex: index,
                                 modifiedIndex: index
                             }
                         }
                         // Add the previous node if any.
-                        if (entry.body.path in this._nodes) {
-                            response.prevNode = this._nodes[entry.body.path].node
+                        const got = this._tree.get(key)
+                        if (got != null) {
+                            response.prevNode = got.node
                             response.node.createdIndex = response.prevNode.createdIndex
                         }
+                        // Log the entry.
+                        this.log.add(response)
                         // Set the key.
-                        this._nodes[entry.body.path] = this.log.add(response)
+                        this._tree.set(key, response)
                         // We want to map the set request and at the end of this function
                         // will will send a reduce message to let other participants know
                         // that we've received it so that the participant that accepted the
                         // HTTP request can send a response.
-                        this.conference.map(entry.body.cookie, {
-                            method: 'edit',
-                            body: this._nodes[entry.body.path]
-                        })
+                        this.conference.map(entry.body.cookie, { method: 'edit', body: response })
                     }
                     break
                 case 'delete': {
                         const index = this.log.length
+                        const path = `/${entry.body.path}`
                         const response = {
                             action: 'delete',
                             node: {
                                 value: entry.body.value,
-                                key: '/' + entry.body.path,
+                                key: path,
                                 createdIndex: index,
                                 modifiedIndex: index
                             }
                         }
-                        if (entry.body.path in this._nodes) {
-                            response.prevNode = this._nodes[entry.body.path].node
+                        const key = path.split('/')
+                        const got = this._tree.get(key)
+                        if (got != null) {
+                            response.prevNode = got.node
                             response.node.createdIndex = response.prevNode.createdIndex
                         }
-                        delete this._nodes[entry.body.path]
+                        this._tree.remove(key)
                         this.conference.map(entry.body.cookie, {
                             method: 'edit',
                             body: this.log.add(response)
@@ -287,7 +293,7 @@ class Addendum {
                     if (! Conference.toArray(reduction).reduce((reset, reduction) => {
                         return reset || reduction.value.reset
                     }, false)) {
-                        delete this._nodes[reduction.map.key]
+                        this._tree.remove(reduction.map.key)
                     }
                 }
                 break
@@ -327,21 +333,20 @@ class Addendum {
 
     //
     get (request, reply) {
-        const key = request.params['*']
-        const node = this._nodes[key]
+        const path = `/${request.params['*']}`
+        const key = path.split('/')
+        const node = this._tree.get(key)
         if (node == null) {
-            reply.code(404)
-            reply.send({
+            throw [ 404, {
                 errorCode:100,
                 message: 'Key not found',
-                cause: '/' + key,
+                cause: key.join('/'),
                 index: this.log.index
-            })
-        } else {
-            return {
-                action: 'get',
-                node: node
-            }
+            } ]
+        }
+        return {
+            action: 'get',
+            node: node
         }
     }
 

@@ -25,7 +25,8 @@
                             "destructible":                 "7.0.0-alpha.71",
                             "happenstance":                 "13.0.0-alpha.0",
                             "fastify-formbody":             "5.1.0",
-                            "reactor":                      "17.0.0-alpha.15"
+                            "reactor":                      "17.0.0-alpha.15",
+                            "wildmap":                      "2.0.0-alpha.1"
     },
     "devDependencies":
     {
