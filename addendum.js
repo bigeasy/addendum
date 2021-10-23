@@ -1,5 +1,6 @@
 const crypto = require('crypto')
 const assert = require('assert')
+const stream = require('stream')
 
 // Return the first value that is not null-like.
 const { coalesce } = require('extant')
@@ -33,6 +34,7 @@ class Addendum {
         this.ready = new Future
         this.log = new Log(1000)
         this._wildmap = new WildMap
+        this._waiting = new WildMap
         this._index = 0
         this._cookie = 0n
         this._snapshots = {}
@@ -126,7 +128,7 @@ class Addendum {
         this._snapshots[arrival.promise] = {
             nodes: this._wildmap.glob([ '', this._wildmap.recursive ])
                 .map(key => ({ key, body: this._wildmap.get(key) }))
-                .filter(({ key, body }) => { console.log(key, body); return ! body.dir })
+                .filter(({ key, body }) => ! body.dir)
                 .map(({ key, body }) => ({ key: key.join('/'), value: body.value })),
             index: this._index
         }
@@ -255,10 +257,30 @@ class Addendum {
                                 }
                             }
                             // Set the key.
-                            if (entry.body.dir) {
-                                wildmap.set(key, { dir: true, node: response.node })
-                            } else {
-                                wildmap.set(key, { dir: false, node: response.node })
+                            wildmap.set(key, { dir: entry.body.dir, node: response.node })
+                            // Do we have anyone waiting?
+                            const waits = this._waiting.get(key) || []
+                            if (waits != null) {
+                                for (const wait of waits) {
+                                    wait.through.write(JSON.stringify(response))
+                                    wait.through.end()
+                                }
+                                this._waiting.unset(key)
+                            }
+                            for (let i = 1, I = key.length; i < I; i++) {
+                                const waits = this._waiting.get(key.slice(0, i)) || []
+                                for (let i = 0; i < waits.length;) {
+                                    if (waits[i].recursive) {
+                                        waits[i].through.write(JSON.stringify(response))
+                                        waits[i].through.end()
+                                        waits.splice(i, 1)
+                                    } else {
+                                        i++
+                                    }
+                                }
+                                if (waits.length == 0) {
+                                    this._waiting.unset(key.slice(0, 1))
+                                }
                             }
                             // We want to map the set request and at the end of this function
                             // will will send a reduce message to let other participants know
@@ -409,6 +431,23 @@ class Addendum {
     get (request, reply) {
         const path = `/${request.params['*']}`
         const key = path.split('/')
+        // **TODO** Check that we have a decent path and what sort of errors we
+        // get.
+        if (request.query.wait == 'true') {
+            const through = new stream.PassThrough({ emitClose: true })
+            let got = this._waiting.get(key)
+            if (got == null) {
+                this._waiting.set(key, got = [])
+            }
+            got.push({ recursive: false, through: through })
+            reply.code(200)
+            reply.headers({
+                'Connection': 'close',
+                'Content-Type': 'application/json'
+            })
+            reply.send(through)
+            return
+        }
         const got = this._wildmap.get(key)
         if (got == null) {
             return [ 404, {
@@ -430,8 +469,6 @@ class Addendum {
                     'X-Etcd-Index': this.log.index
                 }]
             }
-            console.log(got)
-            process.exit()
             return {
                 action: 'get'
             }

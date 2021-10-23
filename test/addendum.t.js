@@ -1,4 +1,4 @@
-require('proof')(13, async okay => {
+require('proof')(15, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -40,6 +40,7 @@ require('proof')(13, async okay => {
             fastify.register(require('fastify-formbody'))
             addresses.addendum = await fastify.listen({ host: '127.0.0.1', port: 0 })
             destructible.destruct(() => destructible.ephemeral('close', () => addendum.reactor.fastify.close()))
+            let count = 0
             addresses.addendum = addendum.reactor.fastify.server.address()
             return new Participant(addendum, addresses)
         }
@@ -230,6 +231,43 @@ require('proof')(13, async okay => {
             }, 'create file with file in path')
         }
         {
+            const put = []
+            const promise = destructible.ephemeral('wait', async () => {
+                await new Promise(resolve => setTimeout(resolve, 250))
+                const response = await axios({
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify({ value: 'z' }),
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/z')
+                })
+                put.push(response.data)
+            }).promise.catch(() => {})
+            const response = await axios({
+                method: 'GET',
+                headers: { 'Connection': 'close' },
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/z?wait=true')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/z',
+                    createdIndex: 5,
+                    modifiedIndex: 5,
+                    value: 'z'
+                }
+            }, 'waited for data')
+            await promise
+            okay(put.shift(), {
+                action: 'set',
+                node: {
+                    key: '/z',
+                    createdIndex: 5,
+                    modifiedIndex: 5,
+                    value: 'z'
+                }
+            }, 'put to trigger wait')
+        }
+        {
             const response = await axios({
                 method: 'PUT',
                 headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -241,8 +279,8 @@ require('proof')(13, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 5,
-                    modifiedIndex: 5
+                    createdIndex: 6,
+                    modifiedIndex: 6
                 }
             }, 'set with ttl')
         }
@@ -258,14 +296,14 @@ require('proof')(13, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 5,
-                    modifiedIndex: 6
+                    createdIndex: 6,
+                    modifiedIndex: 7
                 },
                 prevNode: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 5,
-                    modifiedIndex: 5
+                    createdIndex: 6,
+                    modifiedIndex: 6
                 }
             }, 'reset with ttl')
         }
@@ -276,14 +314,13 @@ require('proof')(13, async okay => {
                     method: 'GET',
                     url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
                 })
-                console.log(got.data)
             } catch (error) {
                 okay(error.response.status, 404, 'get ttl deleted')
                 okay(error.response.data, {
                     errorCode: 100,
                     message: 'Key not found',
                     cause: '/x',
-                    index: 6
+                    index: 7
                 }, 'get ttl deleted body')
             }
         }
