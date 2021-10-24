@@ -431,6 +431,20 @@ class Addendum {
     get (request, reply) {
         const path = `/${request.params['*']}`
         const key = path.split('/')
+        // TODO Seems like wait index will skip a directory creation, whereas
+        // long poll wait will not.
+        if (request.query.waitIndex != null) {
+            const waitIndex = parseInt(request.query.waitIndex, 10)
+            const recursive = request.query.recursive == 'true'
+            const found = this.log.find(waitIndex, recursive ? response => {
+                return response.node.key == path || response.node.key.startsWith(`${path}/`)
+            } : response => {
+                return response.node.key == path
+            })
+            if (found.length != 0) {
+                return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
+            }
+        }
         // **TODO** Check that we have a decent path and what sort of errors we
         // get.
         if (request.query.wait == 'true') {

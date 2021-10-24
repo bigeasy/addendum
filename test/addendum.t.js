@@ -1,4 +1,4 @@
-require('proof')(15, async okay => {
+require('proof')(17, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -266,6 +266,38 @@ require('proof')(15, async okay => {
                     value: 'z'
                 }
             }, 'put to trigger wait')
+        }
+        {
+            const response = await axios({
+                method: 'GET',
+                headers: { 'Connection': 'close' },
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/z?wait=true&waitIndex=1')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/z',
+                    createdIndex: 5,
+                    modifiedIndex: 5,
+                    value: 'z'
+                }
+            }, 'wait index for data')
+        }
+        {
+            const response = await axios({
+                method: 'GET',
+                headers: { 'Connection': 'close' },
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/hello?wait=true&waitIndex=1&recursive=true')
+            })
+            okay(response.data, {
+                action: 'set',
+                node: {
+                    key: '/hello/dolly/oh/hello',
+                    createdIndex: 3,
+                    modifiedIndex: 3,
+                    dir: true
+                }
+            }, 'wait index for data')
         }
         {
             const response = await axios({
