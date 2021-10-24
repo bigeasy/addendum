@@ -295,7 +295,6 @@ class Addendum {
                             const response = {
                                 action: 'delete',
                                 node: {
-                                    value: entry.body.value,
                                     key: path,
                                     createdIndex: index,
                                     modifiedIndex: index
@@ -303,6 +302,12 @@ class Addendum {
                             }
                             const key = path.split('/')
                             const got = this._wildmap.get(key)
+                            if (got != null && got.dir) {
+                                if (! entry.body.recursive) {
+                                    throw new AddendumError(403, 102, key.join('/'))
+                                }
+                                response.node.dir = true
+                            }
                             if (got != null) {
                                 response.prevNode = got.node
                                 response.node.createdIndex = response.prevNode.createdIndex
@@ -525,7 +530,12 @@ class Addendum {
                 const future = this._futures[cookie] = new Future
                 this.compassion.enqueue({
                     method: 'map',
-                    body: { method: 'delete', path: key, cookie }
+                    body: {
+                        method: 'delete',
+                        recursive: request.query.recursive == 'true',
+                        path: key,
+                        cookie
+                    }
                 })
                 return future.promise
             }

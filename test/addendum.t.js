@@ -1,4 +1,4 @@
-require('proof')(17, async okay => {
+require('proof')(19, async okay => {
     const url = require('url')
     const qs = require('qs')
 
@@ -231,6 +231,50 @@ require('proof')(17, async okay => {
             }, 'create file with file in path')
         }
         {
+            const response = []
+            try {
+                await axios({
+                    method: 'DELETE',
+                    url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello')
+                })
+            } catch (error) {
+                response.push({
+                    statusCode: error.response.status,
+                    body: error.response.data
+                })
+            }
+            okay(response.shift(), {
+                statusCode: 403,
+                body: {
+                    statusCode: 102,
+                    message: 'Not a file',
+                    cause: '/hello/dolly/oh/hello',
+                    index: 4
+                }
+            }, 'unable to delete directory without recursive flag')
+        }
+        {
+            const response = await axios({
+                method: 'DELETE',
+                url: url.resolve(participants[0].url.addendum, '/v2/keys/hello/dolly/oh/hello?recursive=true')
+            })
+            okay(response.data, {
+                action: 'delete',
+                node: {
+                    key: '/hello/dolly/oh/hello',
+                    dir: true,
+                    createdIndex: 3,
+                    modifiedIndex: 5
+                },
+                prevNode: {
+                    key: '/hello/dolly/oh/hello',
+                    dir: true,
+                    createdIndex: 3,
+                    modifiedIndex: 3
+                }
+            }, 'unable to delete directory without recursive flag')
+        }
+        {
             const put = []
             const promise = destructible.ephemeral('wait', async () => {
                 await new Promise(resolve => setTimeout(resolve, 250))
@@ -251,8 +295,8 @@ require('proof')(17, async okay => {
                 action: 'set',
                 node: {
                     key: '/z',
-                    createdIndex: 5,
-                    modifiedIndex: 5,
+                    createdIndex: 6,
+                    modifiedIndex: 6,
                     value: 'z'
                 }
             }, 'waited for data')
@@ -261,8 +305,8 @@ require('proof')(17, async okay => {
                 action: 'set',
                 node: {
                     key: '/z',
-                    createdIndex: 5,
-                    modifiedIndex: 5,
+                    createdIndex: 6,
+                    modifiedIndex: 6,
                     value: 'z'
                 }
             }, 'put to trigger wait')
@@ -277,8 +321,8 @@ require('proof')(17, async okay => {
                 action: 'set',
                 node: {
                     key: '/z',
-                    createdIndex: 5,
-                    modifiedIndex: 5,
+                    createdIndex: 6,
+                    modifiedIndex: 6,
                     value: 'z'
                 }
             }, 'wait index for data')
@@ -311,8 +355,8 @@ require('proof')(17, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 6,
-                    modifiedIndex: 6
+                    createdIndex: 7,
+                    modifiedIndex: 7
                 }
             }, 'set with ttl')
         }
@@ -328,14 +372,14 @@ require('proof')(17, async okay => {
                 node: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 6,
-                    modifiedIndex: 7
+                    createdIndex: 7,
+                    modifiedIndex: 8
                 },
                 prevNode: {
                     key: '/x',
                     value: 'x',
-                    createdIndex: 6,
-                    modifiedIndex: 6
+                    createdIndex: 7,
+                    modifiedIndex: 7
                 }
             }, 'reset with ttl')
         }
@@ -352,7 +396,7 @@ require('proof')(17, async okay => {
                     errorCode: 100,
                     message: 'Key not found',
                     cause: '/x',
-                    index: 7
+                    index: 8
                 }, 'get ttl deleted body')
             }
         }
