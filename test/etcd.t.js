@@ -19,8 +19,6 @@ require('proof')(config == null ? count : count * 2, async okay => {
 
     const axios = require('axios')
 
-    const config = require('./etcd.config.json')
-
     const children = require('child_process')
 
     const Destructible = require('destructible')
