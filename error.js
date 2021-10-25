@@ -15,7 +15,7 @@ class AddendumError {
 
     response (index) {
         return [ this.http, {
-            statusCode: this.code,
+            errorCode: this.code,
             message: MESSAGES.get(this.code),
             cause: this.cause,
             index: index

@@ -11,7 +11,7 @@ const config = function () {
     }
 } ()
 
-const count = 10
+const count = 14
 
 require('proof')(config == null ? count : count * 2, async okay => {
     const url = require('url')
@@ -82,7 +82,9 @@ require('proof')(config == null ? count : count * 2, async okay => {
             pruned[name] = node[name]
         }
         if (node.nodes != null) {
-            pruned.nodes = node.nodes.map(node => pruneNode(node))
+            pruned.nodes = node.nodes.map(node => pruneNode(node)).sort((left, right) => {
+                return (left.key > right.key) - (left.key < right.key)
+            })
         }
         return pruned
     }
@@ -101,10 +103,10 @@ require('proof')(config == null ? count : count * 2, async okay => {
                 data: copy.data
             }
         }
+        const { errorCode, message, cause } = response.data
         return {
             status: response.status,
-            body: {
-            }
+            data: { errorCode, message, cause }
         }
     }
 
@@ -296,6 +298,52 @@ require('proof')(config == null ? count : count * 2, async okay => {
                         }
                     }
                 }, 'list directory recursive')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/z', { value: 'z' })
+                okay(prune(response), {
+                    status: 201,
+                    data: {
+                        action: 'set',
+                        node: {
+                            value: 'z',
+                            key: '/addendum/z',
+                        }
+                    }
+                }, 'create file for directory overwrite')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/z', { dir: true })
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'set',
+                        node: { dir: true, key: '/addendum/z', },
+                        prevNode: { value: 'z', key: '/addendum/z', }
+                    }
+                }, 'create directory over file')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/z', { value: 'z' })
+                okay(prune(response), {
+                    status: 403,
+                    data: {
+                        errorCode: 102, message: 'Not a file', cause: '/addendum/z'
+                    }
+                }, 'create file over directory')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/x/y/z', { value: 'z' })
+                okay(prune(response), {
+                    status: 400,
+                    data: {
+                        errorCode: 104, message: 'Not a directory', cause: '/addendum/x'
+                    }
+                }, 'create directory with file in path')
             }
 
             destructible.destroy()

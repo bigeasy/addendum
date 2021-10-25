@@ -186,20 +186,17 @@ class Addendum {
                                 if (got == null) {
                                     break
                                 }
+                                // 400 is Bad Request.
                                 if (! got.dir) {
-                                    throw new AddendumError(403, 104, dir.join('/'))
-                                }
-                            }
-                            const check = this._wildmap.get(key)
-                            if (check != null && check.dir != entry.body.dir) {
-                                if (entry.body.dir) {
-                                    throw new AddendumError(403, 104, key.join('/'))
-                                } else {
-                                    throw new AddendumError(403, 102, key.join('/'))
+                                    throw new AddendumError(400, 104, dir.join('/'))
                                 }
                             }
                             // What do we got there now?
                             const got = this._wildmap.get(key)
+                            // We cannot overwrite a dir with a file.
+                            if (got != null && got.dir != entry.body.dir && got.dir) {
+                                throw new AddendumError(403, 102, key.join('/'))
+                            }
                             // We can overwrite a file with a dir but not a dir with a dir.
                             if (got != null) {
                                 if (got.dir && entry.body.dir) {
