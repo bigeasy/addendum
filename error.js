@@ -1,7 +1,11 @@
 const MESSAGES = new Map([[
+    100, 'Key not found'
+], [
     102, 'Not a file'
 ], [
     104, 'Not a directory'
+], [
+    108, 'Directory not empty'
 ]])
 
 // Does not need to be an error class because we are never going to need a stack

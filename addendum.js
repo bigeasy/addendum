@@ -302,9 +302,18 @@ class Addendum {
                             }
                             const key = path.split('/')
                             const got = this._wildmap.get(key)
+                            if (got == null) {
+                                throw this._404ed(key)
+                            }
                             if (got != null && got.dir) {
-                                if (! entry.body.recursive) {
+                                if (! entry.body.recursive && ! entry.body.dir) {
                                     throw new AddendumError(403, 102, key.join('/'))
+                                }
+                                if (
+                                    ! entry.body.recursive &&
+                                    this._wildmap.glob(key.concat(this._wildmap.single)).length != 0
+                                ) {
+                                    throw new AddendumError(403, 108, key.join('/'))
                                 }
                                 response.node.dir = true
                             }
@@ -424,6 +433,16 @@ class Addendum {
         return 'Addendum API\n'
     }
 
+    _404ed (key) {
+        for (let i = 1, I = key.length; i != I; i++) {
+            const got = this._wildmap.get(key.slice(0, i))
+            if (got == null) {
+                return new AddendumError(404, 100, key.slice(0, i).join('/'))
+            }
+        }
+        return new AddendumError(404, 100, key.join('/'))
+    }
+
     // When we have a get request we send the value of the current participant.
     // We do not run any messages through the atomic log. Your application may
     // require that reads be ordered as well as writes. It doesn't appear that
@@ -466,14 +485,7 @@ class Addendum {
         }
         const got = this._wildmap.get(key)
         if (got == null) {
-            return [ 404, {
-                errorCode:100,
-                message: 'Key not found',
-                cause: key.join('/'),
-                index: this.log.index
-            }, {
-                'X-Etcd-Index': this.log.index
-            } ]
+            return this._404ed(key).response(this.log.index)
         }
         if (got.dir) {
             const recursive = request.query.recursive == 'true'
@@ -576,6 +588,7 @@ class Addendum {
                     method: 'map',
                     body: {
                         method: 'delete',
+                        dir: request.query.dir == 'true',
                         recursive: request.query.recursive == 'true',
                         path: key,
                         cookie
