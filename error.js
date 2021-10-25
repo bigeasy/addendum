@@ -5,6 +5,8 @@ const MESSAGES = new Map([[
 ], [
     104, 'Not a directory'
 ], [
+    107, 'Root is read only'
+], [
     108, 'Directory not empty'
 ]])
 

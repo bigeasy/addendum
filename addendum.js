@@ -34,6 +34,7 @@ class Addendum {
         this.ready = new Future
         this.log = new Log(1000)
         this._wildmap = new WildMap
+        this._wildmap.set([ '' ], { dir: true, node: { dir: true } })
         this._waiting = new WildMap
         this._index = 0
         this._cookie = 0n
@@ -57,6 +58,10 @@ class Addendum {
             method: 'get',
             f: this.index.bind(this)
         }, {
+            path: '/v2/keys',
+            method: 'get',
+            f: this.get.bind(this)
+        }, {
             path: '/v2/keys/*',
             method: 'get',
             f: this.get.bind(this)
@@ -65,9 +70,17 @@ class Addendum {
             method: 'put',
             f: this.keys.bind(this)
         }, {
+            path: '/v2/keys',
+            method: 'put',
+            f: this.root.bind(this)
+        }, {
             path: '/v2/keys/*',
             method: 'delete',
             f: this.keys.bind(this)
+        }, {
+            path: '/v2/keys',
+            method: 'delete',
+            f: this.root.bind(this)
         }])
     }
 
@@ -443,6 +456,10 @@ class Addendum {
         return new AddendumError(404, 100, key.join('/'))
     }
 
+    root () {
+        return new AddendumError(400, 107, '/').response(this.log.index)
+    }
+
     // When we have a get request we send the value of the current participant.
     // We do not run any messages through the atomic log. Your application may
     // require that reads be ordered as well as writes. It doesn't appear that
@@ -450,8 +467,8 @@ class Addendum {
 
     //
     get (request, reply) {
-        const path = `/${request.params['*']}`
-        const key = path.split('/')
+        const path = request.params['*'] == null ? '/' : `/${request.params['*']}`
+        const key = path == '/' ? [ '' ] : path.split('/')
         // TODO Seems like wait index will skip a directory creation, whereas
         // long poll wait will not.
         if (request.query.waitIndex != null) {

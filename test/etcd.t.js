@@ -174,6 +174,13 @@ require('proof')(config == null ? count : count * 2, async okay => {
             await DELETE('/v2/keys/addendum?recursive=true')
 
             {
+                const response = await GET('/v2/keys/')
+                console.log(response.data)
+                delete response.data.node.nodes
+                okay(response.data.node, { dir: true }, 'root has no key or indexes')
+            }
+
+            {
                 const response = await PUT('/v2/keys/addendum', { dir: true })
                 okay(prune(response), {
                     status: 201,
@@ -500,6 +507,22 @@ require('proof')(config == null ? count : count * 2, async okay => {
                         node: { key: '/addendum', dir: true }
                     }
                 }, 'get with trailing slash')
+            }
+
+            {
+                const response = await DELETE('/v2/keys/')
+                okay(prune(response), {
+                    status: 400,
+                    data: { errorCode: 107, message: 'Root is read only', cause: '/' }
+                }, 'delete root')
+            }
+
+            {
+                const response = await PUT('/v2/keys/', { dir: true })
+                okay(prune(response), {
+                    status: 400,
+                    data: { errorCode: 107, message: 'Root is read only', cause: '/' }
+                }, 'put root')
             }
 
             destructible.destroy()
