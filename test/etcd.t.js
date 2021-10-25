@@ -1,0 +1,307 @@
+const fs = require('fs')
+
+const rescue = require('rescue')
+
+const config = function () {
+    try {
+        return require('./etcd.config.json')
+    } catch (error) {
+        rescue(error, [{ code: 'MODULE_NOT_FOUND' }])
+        return null
+    }
+} ()
+
+const count = 10
+
+require('proof')(config == null ? count : count * 2, async okay => {
+    const url = require('url')
+    const qs = require('qs')
+
+    const axios = require('axios')
+
+    const config = require('./etcd.config.json')
+
+    const children = require('child_process')
+
+    const Destructible = require('destructible')
+    const { Queue } = require('avenue')
+
+    const Compassion = require('compassion')
+
+    const Addendum = require('../addendum')
+
+    class AddendumController {
+        static name = 'addendum'
+
+        static async create (destructible) {
+            const census = new Queue
+            destructible.destruct(() => census.push(null))
+            const addendum = new Addendum(destructible.durable('addendum'))
+            const addresses = {
+                compassion: null,
+                addendum: null
+            }
+            addresses.compassion = await Compassion.listen(destructible.durable('compassion'), {
+                census: census.shifter(),
+                applications: { addendum },
+                bind: { host: '127.0.0.1', port: 0 }
+            })
+            const fastify = addendum.reactor.fastify
+            fastify.register(require('fastify-formbody'))
+            await fastify.listen({ host: '127.0.0.1', port: 0 })
+            addresses.addendum = addendum.reactor.fastify.server.address()
+            destructible.destruct(() => destructible.ephemeral('close', () => addendum.reactor.fastify.close()))
+            const urls =  {
+                compassion: `http://${addresses.compassion.address}:${addresses.compassion.port}`,
+                addendum: `http://${addresses.addendum.address}:${addresses.addendum.port}`
+            }
+            census.push([ urls.compassion ])
+            await addendum.ready.promise
+            return urls.addendum
+        }
+    }
+
+    class EtcdController {
+        static name = 'etcd'
+
+        static async create (destructible) {
+            return `http://${config.HostIP}:2379`
+        }
+    }
+
+    const controllers = [ EtcdController, AddendumController ]
+
+    if (config == null) {
+        controllers.shift()
+    }
+
+    function pruneNode (node) {
+        const pruned = {}
+        for (const name in node) {
+            if (/^(?:createdIndex|modifiedIndex)$/.test(name)) {
+                continue
+            }
+            pruned[name] = node[name]
+        }
+        if (node.nodes != null) {
+            pruned.nodes = node.nodes.map(node => pruneNode(node))
+        }
+        return pruned
+    }
+
+    function prune (response) {
+        const copy = JSON.parse(JSON.stringify(response))
+        if (Math.floor(copy.status / 100) == 2) {
+            if (copy.data && copy.data.node) {
+                copy.data.node = pruneNode(copy.data.node)
+            }
+            if (copy.data && copy.data.prevNode) {
+                copy.data.prevNode = pruneNode(copy.data.prevNode)
+            }
+            return {
+                status: copy.status,
+                data: copy.data
+            }
+        }
+        return {
+            status: response.status,
+            body: {
+            }
+        }
+    }
+
+    for (const Controller of controllers) {
+        const destructible = new Destructible(Controller.name)
+        const location = await Controller.create(destructible.durable('controller'))
+
+        async function HTTP (query) {
+            try {
+                const response = await axios(query)
+                return {
+                    headers: response.headers,
+                    status: response.status,
+                    data: response.data
+                }
+            } catch (error) {
+                rescue(error, [{ isAxiosError: true }])
+                return {
+                    headers: error.response.headers,
+                    status: error.response.status,
+                    data: error.response.data
+                }
+            }
+        }
+
+        async function GET (path) {
+            return HTTP({
+                method: 'GET',
+                url: url.resolve(location, path)
+            })
+        }
+
+        function DELETE (path) {
+            return HTTP({
+                method: 'DELETE',
+                url: url.resolve(location, path)
+            })
+        }
+
+        async function PUT (path, body) {
+            return HTTP({
+                method: 'PUT',
+                headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                data: qs.stringify(body),
+                url: url.resolve(location, path)
+            })
+        }
+
+        destructible.durable('test', async () => {
+            await DELETE('/v2/keys/addendum?recursive=true')
+
+            {
+                const response = await PUT('/v2/keys/addendum', { dir: true })
+                okay(prune(response), {
+                    status: 201,
+                    data: {
+                        action: 'set',
+                        node: { dir: true, key: '/addendum' }
+                    }
+                }, 'create root directory')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: { dir: true, key: '/addendum' }
+                    }
+                }, 'get empty root directory')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/x', { value: 'x' })
+                okay(prune(response), {
+                    status: 201,
+                    data: {
+                        action: 'set',
+                        node: { value: 'x', key: '/addendum/x' }
+                    }
+                }, 'set key')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum/x')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: { value: 'x', key: '/addendum/x' }
+                    }
+                }, 'get key')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/x', { value: 'y' })
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'set',
+                        node: { value: 'y', key: '/addendum/x' },
+                        prevNode: { value: 'x', key: '/addendum/x' }
+                    }
+                }, 'update key')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum/x')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: { value: 'y', key: '/addendum/x' }
+                    }
+                }, 'get updated key')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: {
+                            dir: true,
+                            key: '/addendum',
+                            nodes: [{
+                                key: '/addendum/x',
+                                value: 'y'
+                            }]
+                        }
+                    }
+                }, 'list single item directory')
+            }
+
+            {
+                const response = await PUT('/v2/keys/addendum/y/z', { value: 'z' })
+                okay(prune(response), {
+                    status: 201,
+                    data: {
+                        action: 'set',
+                        node: { value: 'z', key: '/addendum/y/z' }
+                    }
+                }, 'create key with vivified path')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: {
+                            dir: true,
+                            key: '/addendum',
+                            nodes: [{
+                                key: '/addendum/x',
+                                value: 'y'
+                            }, {
+                                key: '/addendum/y',
+                                dir: true
+                            }]
+                        }
+                    }
+                }, 'list directory with vivified directory')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum?recursive=true')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: {
+                            dir: true,
+                            key: '/addendum',
+                            nodes: [{
+                                key: '/addendum/x',
+                                value: 'y'
+                            }, {
+                                key: '/addendum/y',
+                                dir: true,
+                                nodes: [{
+                                    key: '/addendum/y/z',
+                                    value: 'z'
+                                }]
+                            }]
+                        }
+                    }
+                }, 'list directory recursive')
+            }
+
+            destructible.destroy()
+        })
+        await destructible.promise
+    }
+})

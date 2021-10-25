@@ -286,7 +286,10 @@ class Addendum {
                             // will will send a reduce message to let other participants know
                             // that we've received it so that the participant that accepted the
                             // HTTP request can send a response.
-                            this.conference.map(entry.body.cookie, { method: 'edit', response: [ 200, response ] })
+                            this.conference.map(entry.body.cookie, {
+                                method: 'edit',
+                                response: [ got == null ? 201 : 200, response, { 'X-Etcd-Index': this.log.index } ]
+                            })
                         }
                         break
                     case 'delete': {
@@ -318,10 +321,7 @@ class Addendum {
                             this._wildmap.remove(key)
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
-                                response: [ 200, response ],
-                                headers: {
-                                    'X-Etcd-Index': this.log.index
-                                }
+                                response: [ 200, response, { 'X-Etcd-Index': this.log.index }]
                             })
                         }
                         break
@@ -479,7 +479,8 @@ class Addendum {
             } ]
         }
         if (got.dir) {
-            const listing = this._wildmap.glob(key.concat(this._wildmap.single))
+            const recursive = request.query.recursive == 'true'
+            const listing = this._wildmap.glob(key.concat(recursive ? this._wildmap.recursive : this._wildmap.single))
             if (listing.length == 0) {
                 return [ 200, {
                     action: 'get',
@@ -488,8 +489,54 @@ class Addendum {
                     'X-Etcd-Index': this.log.index
                 }]
             }
+            if (recursive) {
+                const sorted = listing.sort((left, right) => left.length - right.length)
+                const tree = { children: {} }
+                for (const key of sorted) {
+                    let iterator = tree
+                    for (let i = 1, I = key.length + 1; i < I; i++) {
+                        const part = key[i - 1]
+                        const node = this._wildmap.get(key.slice(0, i))
+                        let child = iterator.children[part]
+                        if (child == null) {
+                            child = iterator.children[part] = { part, children: [], node }
+                        }
+                        iterator = child
+                    }
+                }
+                let start = tree
+                for (const part of key) {
+                    start = start.children[part]
+                }
+                function descend (children) {
+                    const gathered = []
+                    for (const name in children) {
+                        const child = children[name]
+                        const node = { ...child.node.node }
+                        const nodes = descend(child.children)
+                        if (nodes.length != 0) {
+                            node.nodes = nodes
+                        }
+                        gathered.push(node)
+                    }
+                    return gathered
+                }
+                const nodes = descend(start.children)
+                if (nodes != null) {
+                    return [ 200, {
+                        action: 'get',
+                        node: { ...got.node, nodes }
+                    }, {
+                        'X-Etcd-Index': this.log.index
+                    } ]
+                }
+            }
             return {
-                action: 'get'
+                action: 'get',
+                node: {
+                    ...got.node,
+                    nodes: listing.map(key => this._wildmap.get(key).node)
+                }
             }
         }
         return {
