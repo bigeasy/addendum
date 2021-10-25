@@ -14,7 +14,7 @@ const config = function () {
 // **TODO** Does the root key exist on a fresh boot of `etcd` and if so what is
 // its index and value?
 
-const count = 28
+const count = 31
 
 require('proof')(config == null ? count : count * 2, async okay => {
     const url = require('url')
@@ -175,7 +175,6 @@ require('proof')(config == null ? count : count * 2, async okay => {
 
             {
                 const response = await GET('/v2/keys/')
-                console.log(response.data)
                 delete response.data.node.nodes
                 okay(response.data.node, { dir: true }, 'root has no key or indexes')
             }
