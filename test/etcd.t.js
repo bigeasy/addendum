@@ -14,7 +14,7 @@ const config = function () {
 // **TODO** Does the root key exist on a fresh boot of `etcd` and if so what is
 // its index and value?
 
-const count = 26
+const count = 28
 
 require('proof')(config == null ? count : count * 2, async okay => {
     const url = require('url')
@@ -49,6 +49,17 @@ require('proof')(config == null ? count : count * 2, async okay => {
             })
             const fastify = addendum.reactor.fastify
             fastify.register(require('fastify-formbody'))
+            fastify.addHook('onRequest', async (request, reply) => {
+                const parsed = url.parse(request.url)
+                const slashed = url.resolve('/', parsed.pathname)
+                const pathname = slashed.endsWith('/') && slashed.length > 1
+                    ? slashed.substring(0, slashed.length - 1)
+                    : slashed
+                if (pathname != parsed.pathname) {
+                    parsed.pathname = pathname
+                    reply.redirect(301, url.format(parsed))
+                }
+            })
             await fastify.listen({ host: '127.0.0.1', port: 0 })
             addresses.addendum = addendum.reactor.fastify.server.address()
             destructible.destruct(() => destructible.ephemeral('close', () => addendum.reactor.fastify.close()))
@@ -75,6 +86,7 @@ require('proof')(config == null ? count : count * 2, async okay => {
     if (config == null) {
         controllers.shift()
     }
+    // controllers.pop()
 
     function pruneNode (node) {
         const pruned = {}
@@ -138,14 +150,14 @@ require('proof')(config == null ? count : count * 2, async okay => {
         async function GET (path) {
             return HTTP({
                 method: 'GET',
-                url: url.resolve(location, path)
+                url: location + path
             })
         }
 
         function DELETE (path) {
             return HTTP({
                 method: 'DELETE',
-                url: url.resolve(location, path)
+                url: location + path
             })
         }
 
@@ -154,7 +166,7 @@ require('proof')(config == null ? count : count * 2, async okay => {
                 method: 'PUT',
                 headers: { 'content-type': 'application/x-www-form-urlencoded' },
                 data: qs.stringify(body),
-                url: url.resolve(location, path)
+                url: location + path
             })
         }
 
@@ -453,6 +465,21 @@ require('proof')(config == null ? count : count * 2, async okay => {
             }
 
             {
+                const response = await GET('/v2/keys/addendum/y/..')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: {
+                            key: '/addendum',
+                            dir: true,
+                            nodes: [{ key: '/addendum/y', dir : true }]
+                        },
+                    }
+                }, 'get with dots in the path')
+            }
+
+            {
                 const response = await DELETE('/v2/keys/addendum/y?dir=true&recursive=true')
                 okay(prune(response), {
                     status: 200,
@@ -462,6 +489,17 @@ require('proof')(config == null ? count : count * 2, async okay => {
                         prevNode: { key: '/addendum/y', dir: true }
                     }
                 }, 'delete recursive with both dir and recursive flag')
+            }
+
+            {
+                const response = await GET('/v2/keys/addendum/')
+                okay(prune(response), {
+                    status: 200,
+                    data: {
+                        action: 'get',
+                        node: { key: '/addendum', dir: true }
+                    }
+                }, 'get with trailing slash')
             }
 
             destructible.destroy()
