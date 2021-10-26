@@ -475,7 +475,6 @@ class Addendum {
             if (waits != null) {
                 for (let j = 0; j < waits.length;) {
                     if (waits[j].recursive) {
-                        console.log(key.slice(0, i), waits[j].recursive, response)
                         waits[j].through.write(JSON.stringify(response))
                         waits[j].through.end()
                         waits.splice(j, 1)

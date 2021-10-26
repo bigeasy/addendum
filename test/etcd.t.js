@@ -14,7 +14,7 @@ const config = function () {
 // **TODO** Does the root key exist on a fresh boot of `etcd` and if so what is
 // its index and value?
 
-const count = 45
+const count = 49
 
 require('proof')(config == null ? count : count * 2, async okay => {
     const url = require('url')
@@ -618,13 +618,11 @@ require('proof')(config == null ? count : count * 2, async okay => {
                     const get = await GET(`/v2/keys/addendum/wait?wait=true&recursive=true&waitIndex=${index}`)
                     gathered.push(prune(get))
                     index = get.data.node.modifiedIndex + 1
-                    console.log('>', get)
                 }
                 const get = GET(`/v2/keys/addendum/wait?wait=true&recursive=true&waitIndex=${index}`)
                 await new Promise(resolve => setTimeout(resolve, 150))
                 const put = await PUT('/v2/keys/addendum/wait/x', { value: 'z' })
                 const got = await get
-                console.log(got)
                 okay(prune(got), {
                     status: 200,
                     data: {
@@ -686,6 +684,58 @@ require('proof')(config == null ? count : count * 2, async okay => {
                         prevNode: { key: '/addendum/wait/x', value: 'z' }
                     }
                 }, 'delete wait delete key')
+            }
+
+            {
+                const get = GET('/v2/keys/addendum/wait?wait=true&recursive=true')
+                await new Promise(resolve => setTimeout(resolve, 50))
+                const del = await DELETE('/v2/keys/addendum/wait?dir=true')
+                okay(prune(await get), {
+                    status: 200,
+                    data: {
+                        action: 'delete',
+                        node: { key: '/addendum/wait', dir: true },
+                        prevNode: { key: '/addendum/wait', dir: true }
+                    }
+                }, 'get recursive wait delete waiting directory')
+                okay(prune(del), {
+                    status: 200,
+                    data: {
+                        action: 'delete',
+                        node: { key: '/addendum/wait', dir: true },
+                        prevNode: { key: '/addendum/wait', dir: true }
+                    }
+                }, 'delete recursive wait delete waiting directory')
+            }
+
+            {
+                const requests = []
+                requests.push(await PUT('/v2/keys/addendum/wait/x', { value: 'x' }))
+                const get = GET('/v2/keys/addendum/wait?wait=true&recursive=true')
+                await new Promise(resolve => setTimeout(resolve, 52))
+                requests.push(await DELETE('/v2/keys/addendum/wait?recursive=true'))
+                okay(prune(await get), {
+                    status: 200,
+                    data: {
+                        action: 'delete',
+                        node: { key: '/addendum/wait', dir: true },
+                        prevNode: { key: '/addendum/wait', dir: true }
+                    }
+                }, 'get wait delete directory recursive')
+                okay(requests.map(request => prune(request)), [{
+                    status: 201,
+                    data: {
+                        action: 'set',
+                        node: { key: '/addendum/wait/x', value: 'x' },
+                    }
+                }, {
+                    status: 200,
+                    data: {
+                        action: 'delete',
+                        node: { key: '/addendum/wait', dir: true },
+                        prevNode: { key: '/addendum/wait', dir: true }
+                    }
+                }], 'delete wait delete key')
             }
 
             destructible.destroy()
