@@ -2,49 +2,84 @@ const crypto = require('crypto')
 const assert = require('assert')
 const stream = require('stream')
 
+// **TODO** You can probably collapse the nodes in the wild map. You don't need
+// them to be nested. You thought you'd be adding wait properties to the node
+// but you're tracking that in a different map.
+
 // Return the first value that is not null-like.
 const { coalesce } = require('extant')
 
-const Cubbyhole = require('cubbyhole')
+// Shorthand for binding HTTP verbs to class methods.
 const Reactor = require('reactor')
 
 const Conference = require('conference')
 
+// An event scheduler to manage multiple timed events inside a calendar using a
+// single `setTimeout`.
 const { Calendar, Timer } = require('happenstance')
 
+// A future wrapper around a Promise.
 const { Future } = require('perhaps')
 
+// Conditionally catch a JavaScript exception based on type and properties.
 const rescue = require('rescue')
 
-const Log = require('./log')
+// A map keyed by path with wildcard matching.
 const WildMap = require('wildmap')
+
+// Log of messages for wait index playback.
+const Log = require('./log')
 
 const AddendumError = require('./error')
 
-/* Just a thought.
-class Middleware extends Reactor {
-    get = reaction('POST /get', async function ({ request }) {
-        return 400
-    })
-}
-*/
+// Compassion applications are implemented as a class that implements a specific
+// interface of `async`/`await` functions. Addendum is an implementation of the
+// `etcd` v2 API using Compassion. With it you'll be able to see how you might
+// go about building a consensus application using an atomic log.
 
+//
 class Addendum {
     constructor (destructible) {
+        // We trip promise this when we are ready to receive messages.
         this.ready = new Future
+        // Our change log with 1000 entries according to `etcd` docs.
         this.log = new Log(1000)
+        // Our tree of keys.
         this._wildmap = new WildMap
+        // The root key is read-only and has no version (index) information.
         this._wildmap.set([ '' ], { dir: true, node: { dir: true } })
+        // Our tree of long polling waits for changes.
         this._waiting = new WildMap
+        // **TOOD** This is wrong. We need snapshot and join inside the log.
         this._index = 0
+        // A cookie used to map promises waiting on the atomic log. We map
+        // promises to these cookies and resolve the promises when the logged
+        // processing has completed.
         this._cookie = 0n
-        this._snapshots = {}
+        // Our map of cookies to awaiting HTTP response promises.
         this._futures = {}
-        this._set = new Cubbyhole
+        // A map of snapshots of the application state indexed by the arrival
+        // promise of a new participant. We make a snapshot when we see an
+        // arrival and if we are the leader the new arrival will ask for the
+        // snapshot through the `snapshot` method. (TODO Maybe move these words
+        // to the snapshot method.)
+        this._snapshots = {}
+        // The compassion object set on initalize.
         this.compassion = null
+        // A calendar used to schedule timed events, specifically the `ttl`
+        // expiration of keys.
         this.calendar = new Calendar
+        // We have to wrap the calendar in a timer that will manage a single
+        // `setTimeout` for the next scheduled event in the calendar.
         const timer = new Timer(this.calendar)
+        // Destroy the timer when the application is destroyed.
         destructible.destruct(() => timer.destroy())
+        // When the calendar fires an event we enqueue a `ttl` message. This is
+        // a reduce message, so only when a `ttl` message is received from every
+        // member and all of the messages have `reset` as `false` will the key
+        // be deleted. Timers will fire arbitrarily, but by running this
+        // countdown through the atomic log we ensure that all of the
+        // TTL deletions occur in the same order.
         this.calendar.on('data', ({ key, body: { cookie }}) => {
             this.compassion.enqueue({
                 method: 'reduce',
@@ -52,7 +87,13 @@ class Addendum {
                 body: { method: 'ttl', reset: false }
             })
         })
+        // Our map/reduce utility that will map a message and then countdown the
+        // responses from each participant as well as account for arriving and
+        // departing participants.
         this.conference = new Conference
+        // The `etc` HTTP interface. We map the `etcd` HTTP API to `async`
+        // methods on this class, so this class implements both the Compassion
+        // API and the HTTP API.
         this.reactor = new Reactor([{
             path: '/',
             method: 'get',
@@ -86,6 +127,8 @@ class Addendum {
 
     // The `initialize` method sets the Compassion object for this instance of
     // Addendum, a Compassion based application.
+
+    //
     initialize (compassion) {
         this.compassion = compassion
     }
@@ -115,8 +158,8 @@ class Addendum {
         queue.push(null)
     }
 
-    // Called when a new participant after the the first participant arrives
-    // with the other end of the queue from the `snapshot` side.
+    // Called when a new participant after the first participant arrives with
+    // the other end of the queue from the `snapshot` side.
 
     //
     async join ({ shifter }) {
@@ -129,10 +172,13 @@ class Addendum {
     }
 
     // **TODO** `arrvial.promise` should be `arrival.arrived`.
+
+    //
+
     // When we have a new arrival we add its arrival promise to the `Conference`
     // so the `Conference` has an accurate census of participants. We then take
     // a snapshot of the current state of the application in case we're asked to
-    // provide a snapshot for the new participant. Finally, we mark oursleves as
+    // provide a snapshot for the new participant. Finally, we mark ourselves as
     // `ready` since the first arrival we receive will be for ourselves.
 
     //
@@ -181,7 +227,25 @@ class Addendum {
         switch (entry.method) {
         // Response to a message that has been enqueued by a specific
         // participant and requires an acknowledgement from all participants.
+        // This is essentially map/reduce and we use `Conference` to implement
+        // the map/reduce accounting.
+
+        // Note that we don't just make note of the arrival with a call to
+        // `Conference.map`. We actually build out our response and map that.
+        // Because our logic is deterministic and every participant is
+        // receiving the same entries in the same order, all participants will
+        // build the same response for each entry. We then use
+        // `Compassion.reduce` to determine when all participants have received
+        // the message and only then to we send an HTTP response to the caller.
+
+        //
         case 'map': {
+                // For the `map` case we use a try/catch block and a special
+                // exception. We can throw an exception from anywhere and that
+                // exception will format the appropriate error response and map it
+                // using `Conference.map`.
+
+                //
                 try {
                     // We now switch on the specific message we want to map.
                     switch (entry.body.method) {
@@ -210,21 +274,21 @@ class Addendum {
                             if (got != null && got.dir != entry.body.dir && got.dir) {
                                 throw new AddendumError(403, 102, key.join('/'))
                             }
-                            // We can overwrite a file with a dir but not a dir with a dir.
-                            if (got != null) {
-                                if (got.dir && entry.body.dir) {
-                                    throw new AddendumError(403, 102, key.join('/'))
-                                }
-                            }
                             // If we already have a ttl set for this key we need to notify the
-                            // other participants that it is going to be reset.
+                            // other participants that it is going to be reset. This will
+                            // cancel the `ttl` deletion even if other participants have had
+                            // their timers fire and have enqueued a `ttl` timeout because
+                            // `reset` must by unanimously false.
+                            //
+                            // **TODO** Obviously broken because there is no `'reduce'`
+                            // envelope. How do we unit test this?
                             const ttl = this.calendar.what(entry.body.path)
                             if (ttl != null) {
                                 this.compassion.enqueue({ method: 'ttl', cookie: ttl.cookie, reset: true })
                             }
-                            // If we have ttl in this set requeset, we schedule the timeout for
+                            // If we have ttl in this set request, we schedule the timeout for
                             // the TTL and map a cookie so we can countdown all the timers or
-                            // cancelations of all the participants before actually deleting.
+                            // cancellations of all the participants before actually deleting.
                             if (entry.body.ttl != null) {
                                 const cookie = `${entry.body.cookie}-ttl`
                                 this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
@@ -240,17 +304,22 @@ class Addendum {
                                     modifiedIndex: index
                                 }
                             }
+                            // File and directory nodes have different properties.
                             if (entry.body.dir) {
                                 response.node.dir = entry.body.dir
                             } else {
                                 response.node.value = entry.body.value
                             }
+                            // If we had a value, set the previous node property.
                             if (got != null) {
                                 response.prevNode = got.node
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // Log the entry.
                             this.log.add(response)
+                            // Ensure that there is a path of directories to the key, creating
+                            // any directories that are missing. Note that we checked above to
+                            // ensure that there is not a file in the path.
                             const wildmap = this._wildmap
                             for (let i = 1, I = key.length; i != I; i++) {
                                 const got = wildmap.get(key.slice(0, i))
@@ -268,43 +337,32 @@ class Addendum {
                             }
                             // Set the key.
                             wildmap.set(key, { dir: entry.body.dir, node: response.node })
-                            // Do we have anyone waiting?
-                            const waits = this._waiting.get(key) || []
-                            if (waits != null) {
-                                for (const wait of waits) {
-                                    wait.through.write(JSON.stringify(response))
-                                    wait.through.end()
-                                }
-                                this._waiting.unset(key)
-                            }
-                            for (let i = 1, I = key.length; i < I; i++) {
-                                const waits = this._waiting.get(key.slice(0, i)) || []
-                                for (let i = 0; i < waits.length;) {
-                                    if (waits[i].recursive) {
-                                        waits[i].through.write(JSON.stringify(response))
-                                        waits[i].through.end()
-                                        waits.splice(i, 1)
-                                    } else {
-                                        i++
-                                    }
-                                }
-                                if (waits.length == 0) {
-                                    this._waiting.unset(key.slice(0, 1))
-                                }
-                            }
-                            // We want to map the set request and at the end of this function
-                            // will will send a reduce message to let other participants know
-                            // that we've received it so that the participant that accepted the
-                            // HTTP request can send a response.
+                            // Do we have anyone waiting? Notify any GET requests waiting on
+                            // change notifications.
+                            this.notify(key, response)
+                            // Here we call `map`. Might seem strange, to me at least, to call
+                            // last thing, but it's fine really. This is the response we'll send
+                            // to the HTTP client if we're the participant that accepted the
+                            // request.
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ got == null ? 201 : 200, response, { 'X-Etcd-Index': this.log.index } ]
                             })
                         }
                         break
+                    // The `'delete'` message indicates that we want to delete a key/value.
                     case 'delete': {
-                            const index = this.log.length
+                            // Create a path from the Fastify pattern match.
                             const path = `/${entry.body.path}`
+                            // Create a key from the path.
+                            const key = path.split('/')
+                            // If the key does not exist 404.
+                            const got = this._wildmap.get(key)
+                            if (got == null) {
+                                throw this._404ed(key)
+                            }
+                            // Create a response structure.
+                            const index = this.log.length
                             const response = {
                                 action: 'delete',
                                 node: {
@@ -313,31 +371,41 @@ class Addendum {
                                     modifiedIndex: index
                                 }
                             }
-                            const key = path.split('/')
-                            const got = this._wildmap.get(key)
-                            if (got == null) {
-                                throw this._404ed(key)
-                            }
-                            if (got != null && got.dir) {
-                                if (! entry.body.recursive && ! entry.body.dir) {
-                                    throw new AddendumError(403, 102, key.join('/'))
-                                }
-                                if (
-                                    ! entry.body.recursive &&
-                                    this._wildmap.glob(key.concat(this._wildmap.single)).length != 0
-                                ) {
-                                    throw new AddendumError(403, 108, key.join('/'))
-                                }
-                                response.node.dir = true
-                            }
+                            // If we have a previous value...
                             if (got != null) {
+                                // If the value is a directory...
+                                if (got.dir) {
+                                    // Check that the user asked to delete a directory or to delete
+                                    // recursively, otherwise we error with "not a directory."
+                                    if (! entry.body.recursive && ! entry.body.dir) {
+                                        throw new AddendumError(403, 102, key.join('/'))
+                                    }
+                                    // If the delete is not recursive and there are items in the
+                                    // directory throw "directory not empty."
+                                    if (
+                                        ! entry.body.recursive &&
+                                        this._wildmap.glob(key.concat(this._wildmap.single)).length != 0
+                                    ) {
+                                        throw new AddendumError(403, 108, key.join('/'))
+                                    }
+                                    // Mark response as a directory.
+                                    response.node.dir = true
+                                }
+                                // Add the previous value node to the response.
                                 response.prevNode = got.node
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // Log the entry.
                             this.log.add(response)
+                            // Do we have anyone waiting? Notify any GET requests waiting on
+                            // change notifications.
+                            this.notify(key, response)
                             // Remove the key.
                             this._wildmap.remove(key)
+                            // Here we call `map`. Might seem strange, to me at least, to call
+                            // last thing, but it's fine really. This is the response we'll send
+                            // to the HTTP client if we're the participant that accepted the
+                            // request.
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ 200, response, { 'X-Etcd-Index': this.log.index }]
@@ -346,19 +414,79 @@ class Addendum {
                         break
                     }
                 } catch (error) {
+                    // If the exception is not an exception specific to our application,
+                    // `rescue` will rethrow the exception.
                     rescue(error, [ AddendumError ])
+                    // Our exception is one of the expected error conditions. Format the
+                    // HTTP error response with code, headers and body.
                     this.conference.map(entry.body.cookie, {
                         method: 'edit',
                         response: error.response(this.log.index)
                     })
                 }
+                // Enqueue a reduce message to indicate that we've received and
+                // processed the message.
                 this.compassion.enqueue({ method: 'reduce', cookie: entry.body.cookie, body: null })
             }
             break
+        // For `'reduce'` we call our `Conference.reduce`. It keeps a tally of
+        // the reduce messages for a specific message mapped by the cookie. If
+        // we have a reduce message from all participants it returns an array
+        // containing one map message and a set reduce message one for each
+        // participant. If we do not have all the reduce messages yet it returns
+        // an empty array.
+
+        //
         case 'reduce': {
                 this.reduce(this.conference.reduce(entry.cookie, self.arrived, entry.body))
             }
             break
+        }
+    }
+
+    // Do we have anyone waiting? Called for both `'set'` and `'delete'`
+    // messages in the `'map'` section of the `entry` method above.
+
+    // The wild map is keyed on a key path and the value is an array of waits
+    // which is a `recursive` flag and a Node.js `stream` which serves the body
+    // of a GET request. The client is blocking on the completion of the GET
+    // request.
+
+    // When a wait is notified it is removed from the wild map. We're completing
+    // an HTTP GET request so the wait has been consumed.
+
+    //
+    notify (key, response) {
+        // We look in our wait wild map for the set of waits specific to the
+        // key. All of those waits are notified with the response.
+        const waits = this._waiting.get(key)
+        if (waits != null) {
+            for (const wait of waits) {
+                wait.through.write(JSON.stringify(response))
+                wait.through.end()
+            }
+            this._waiting.unset(key)
+        }
+        // We go up the key path looking for the set of waits for each
+        // directory in the path. If any of those waits is recursive it is
+        // notified of the response.
+        for (let i = 1, I = key.length; i < I; i++) {
+            const waits = this._waiting.get(key.slice(0, i))
+            if (waits != null) {
+                for (let j = 0; j < waits.length;) {
+                    if (waits[j].recursive) {
+                        console.log(key.slice(0, i), waits[j].recursive, response)
+                        waits[j].through.write(JSON.stringify(response))
+                        waits[j].through.end()
+                        waits.splice(j, 1)
+                    } else {
+                        j++
+                    }
+                }
+                if (waits.length == 0) {
+                    this._waiting.unset(key.slice(0, 1))
+                }
+            }
         }
     }
     //
@@ -471,27 +599,28 @@ class Addendum {
         const key = path == '/' ? [ '' ] : path.split('/')
         // TODO Seems like wait index will skip a directory creation, whereas
         // long poll wait will not.
-        if (request.query.waitIndex != null) {
-            const waitIndex = parseInt(request.query.waitIndex, 10)
-            const recursive = request.query.recursive == 'true'
-            const found = this.log.find(waitIndex, recursive ? response => {
-                return response.node.key == path || response.node.key.startsWith(`${path}/`)
-            } : response => {
-                return response.node.key == path
-            })
-            if (found.length != 0) {
-                return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
-            }
-        }
         // **TODO** Check that we have a decent path and what sort of errors we
         // get.
         if (request.query.wait == 'true') {
+            if (request.query.waitIndex != null) {
+                const waitIndex = parseInt(request.query.waitIndex, 10)
+                const recursive = request.query.recursive == 'true'
+                const found = this.log.find(waitIndex, recursive ? response => {
+                    return response.node.key.startsWith(`${path}/`)
+                    return response.node.key == path || response.node.key.startsWith(`${path}/`)
+                } : response => {
+                    return response.node.key == path
+                })
+                if (found.length != 0) {
+                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
+                }
+            }
             const through = new stream.PassThrough({ emitClose: true })
             let got = this._waiting.get(key)
             if (got == null) {
                 this._waiting.set(key, got = [])
             }
-            got.push({ recursive: false, through: through })
+            got.push({ recursive: request.query.recursive == 'true', through: through })
             reply.code(200)
             reply.headers({
                 'Connection': 'close',
