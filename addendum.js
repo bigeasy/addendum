@@ -270,8 +270,8 @@ class Addendum {
                             }
                             // What do we got there now?
                             const got = this._wildmap.get(key)
-                            // We cannot overwrite a dir with a file.
-                            if (got != null && got.dir != entry.body.dir && got.dir) {
+                            // We cannot overwrite a dir
+                            if (got != null && got.dir) {
                                 throw new AddendumError(403, 102, key.join('/'))
                             }
                             // If we already have a ttl set for this key we need to notify the

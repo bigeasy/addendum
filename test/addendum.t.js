@@ -167,7 +167,7 @@ require('proof')(19, async okay => {
             okay(response.shift(), {
                 statusCode: 403,
                 body: {
-                    statusCode: 102,
+                    errorCode: 102,
                     message: 'Not a file',
                     cause: '/hello/dolly/oh/hello',
                     index: 3
@@ -177,7 +177,7 @@ require('proof')(19, async okay => {
         {
             const response = []
             try {
-                await axios({
+                const result = await axios({
                     method: 'PUT',
                     headers: { 'content-type': 'application/x-www-form-urlencoded' },
                     data: qs.stringify({ dir: true }),
@@ -192,7 +192,7 @@ require('proof')(19, async okay => {
             okay(response.shift(), {
                 statusCode: 403,
                 body: {
-                    statusCode: 102,
+                    errorCode: 102,
                     message: 'Not a file',
                     cause: '/hello/dolly/oh/hello',
                     index: 3
@@ -221,9 +221,9 @@ require('proof')(19, async okay => {
                 })
             }
             okay(response.shift(), {
-                statusCode: 403,
+                statusCode: 400,
                 body: {
-                    statusCode: 104,
+                    errorCode: 104,
                     message: 'Not a directory',
                     cause: '/hello/world',
                     index: 4
@@ -246,7 +246,7 @@ require('proof')(19, async okay => {
             okay(response.shift(), {
                 statusCode: 403,
                 body: {
-                    statusCode: 102,
+                    errorCode: 102,
                     message: 'Not a file',
                     cause: '/hello/dolly/oh/hello',
                     index: 4
