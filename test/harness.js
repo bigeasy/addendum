@@ -78,94 +78,100 @@ function etcd (count, f) {
         if (config == null) {
             controllers.shift()
         }
-        // controllers.pop()
 
-        await f(okay, controllers)
-    })
-}
+        const Destructible = require('destructible')
 
-function pruneNode (node) {
-    const pruned = {}
-    for (const name in node) {
-        if (/^(?:createdIndex|modifiedIndex)$/.test(name)) {
-            continue
-        }
-        pruned[name] = node[name]
-    }
-    if (node.nodes != null) {
-        pruned.nodes = node.nodes.map(node => pruneNode(node)).sort((left, right) => {
-            return (left.key > right.key) - (left.key < right.key)
-        })
-    }
-    return pruned
-}
-
-function prune (response) {
-    const copy = JSON.parse(JSON.stringify(response))
-    if (Math.floor(copy.status / 100) == 2) {
-        if (copy.data && copy.data.node) {
-            copy.data.node = pruneNode(copy.data.node)
-        }
-        if (copy.data && copy.data.prevNode) {
-            copy.data.prevNode = pruneNode(copy.data.prevNode)
-        }
-        return {
-            status: copy.status,
-            data: copy.data
-        }
-    }
-    const { errorCode, message, cause } = response.data
-    return {
-        status: response.status,
-        data: { errorCode, message, cause }
-    }
-}
-
-function HTTP (location) {
-    const axios = require('axios')
-    const qs = require('qs')
-
-        async function HTTP (query) {
-            try {
-                const response = await axios(query)
-                return {
-                    headers: response.headers,
-                    status: response.status,
-                    data: response.data
+        function pruneNode (node) {
+            const pruned = {}
+            for (const name in node) {
+                if (/^(?:createdIndex|modifiedIndex)$/.test(name)) {
+                    continue
                 }
-            } catch (error) {
-                rescue(error, [{ isAxiosError: true }])
-                return {
-                    headers: error.response.headers,
-                    status: error.response.status,
-                    data: error.response.data
+                pruned[name] = node[name]
+            }
+            if (node.nodes != null) {
+                pruned.nodes = node.nodes.map(node => pruneNode(node)).sort((left, right) => {
+                    return (left.key > right.key) - (left.key < right.key)
+                })
+            }
+            return pruned
+        }
+
+        function prune (response) {
+            const copy = JSON.parse(JSON.stringify(response))
+            if (Math.floor(copy.status / 100) == 2) {
+                if (copy.data && copy.data.node) {
+                    copy.data.node = pruneNode(copy.data.node)
                 }
+                if (copy.data && copy.data.prevNode) {
+                    copy.data.prevNode = pruneNode(copy.data.prevNode)
+                }
+                return {
+                    status: copy.status,
+                    data: copy.data
+                }
+            }
+            const { errorCode, message, cause } = response.data
+            return {
+                status: response.status,
+                data: { errorCode, message, cause }
             }
         }
 
-        function GET (path) {
-            return HTTP({
-                method: 'GET',
-                url: location + path
-            })
-        }
+        for (const Controller of controllers) {
+            const destructible = new Destructible(Controller.name)
+            const location = await Controller.create(destructible.durable('controller'))
 
-        function DELETE (path) {
-            return HTTP({
-                method: 'DELETE',
-                url: location + path
-            })
-        }
+            async function HTTP (query) {
+                try {
+                    const response = await axios(query)
+                    return {
+                        headers: response.headers,
+                        status: response.status,
+                        data: response.data
+                    }
+                } catch (error) {
+                    rescue(error, [{ isAxiosError: true }])
+                    return {
+                        headers: error.response.headers,
+                        status: error.response.status,
+                        data: error.response.data
+                    }
+                }
+            }
 
-        function PUT (path, body) {
-            return HTTP({
-                method: 'PUT',
-                headers: { 'content-type': 'application/x-www-form-urlencoded' },
-                data: qs.stringify(body),
-                url: location + path
+            function GET (path) {
+                return HTTP({
+                    method: 'GET',
+                    url: location + path
+                })
+            }
+
+            function DELETE (path) {
+                return HTTP({
+                    method: 'DELETE',
+                    url: location + path
+                })
+            }
+
+            function PUT (path, body) {
+                return HTTP({
+                    method: 'PUT',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify(body),
+                    url: location + path
+                })
+            }
+
+            destructible.durable('test', async () => {
+                await f(okay, { location, GET, PUT, DELETE, prune })
+                destructible.destroy()
             })
+
+            await destructible.promise
         }
-    return  { GET, PUT, DELETE }
+    })
 }
 
-module.exports = { etcd, HTTP, prune }
+
+module.exports = etcd
