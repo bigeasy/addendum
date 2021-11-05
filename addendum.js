@@ -286,14 +286,6 @@ class Addendum {
                             if (ttl != null) {
                                 this.compassion.enqueue({ method: 'ttl', cookie: ttl.cookie, reset: true })
                             }
-                            // If we have ttl in this set request, we schedule the timeout for
-                            // the TTL and map a cookie so we can countdown all the timers or
-                            // cancellations of all the participants before actually deleting.
-                            if (entry.body.ttl != null) {
-                                const cookie = `${entry.body.cookie}-ttl`
-                                this.calendar.schedule(Date.now() + 1000 * entry.body.ttl, entry.body.path, { cookie })
-                                this.conference.map(cookie, { method: 'ttl', key: key })
-                            }
                             // Create our response message.
                             const index = this.log.length
                             const response = {
@@ -303,6 +295,17 @@ class Addendum {
                                     createdIndex: index,
                                     modifiedIndex: index
                                 }
+                            }
+                            // If we have ttl in this set request, we schedule the timeout for
+                            // the TTL and map a cookie so we can countdown all the timers or
+                            // cancellations of all the participants before actually deleting.
+                            if (entry.body.ttl != null) {
+                                const cookie = `${entry.body.cookie}-ttl`
+                                const when = Date.now() + 1000 * +entry.body.ttl
+                                response.node.expiration = new Date(when).toISOString()
+                                response.node.ttl = +entry.body.ttl
+                                this.calendar.schedule(when, entry.body.path, { cookie })
+                                this.conference.map(cookie, { method: 'ttl', key: key })
                             }
                             // File and directory nodes have different properties.
                             if (entry.body.dir) {

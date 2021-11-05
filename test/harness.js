@@ -84,7 +84,7 @@ function etcd (count, f) {
         function pruneNode (node) {
             const pruned = {}
             for (const name in node) {
-                if (/^(?:createdIndex|modifiedIndex)$/.test(name)) {
+                if (/^(?:createdIndex|modifiedIndex|expiration)$/.test(name)) {
                     continue
                 }
                 pruned[name] = node[name]
@@ -164,7 +164,7 @@ function etcd (count, f) {
             }
 
             destructible.durable('test', async () => {
-                await f(okay, { location, GET, PUT, DELETE, prune })
+                await f(okay, { location, GET, PUT, DELETE, prune, controller: Controller.name })
                 destructible.destroy()
             })
 
