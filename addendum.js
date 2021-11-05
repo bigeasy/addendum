@@ -318,6 +318,9 @@ class Addendum {
                             } else {
                                 response.node.value = entry.body.refresh ? got.node.value : entry.body.value
                             }
+                            if (entry.body.refresh && entry.body.prevExist) {
+                                response.action = 'update'
+                            }
                             // Log the entry.
                             this.log.add(response)
                             // Ensure that there is a path of directories to the key, creating
@@ -723,6 +726,7 @@ class Addendum {
                         path: key,
                         value: body.value,
                         refresh: body.refresh == 'true',
+                        prevExist: body.prevExist == 'true',
                         ttl: coalesce(body.ttl),
                         dir: body.dir == 'true',
                         cookie
