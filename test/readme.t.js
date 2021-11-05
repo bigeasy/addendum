@@ -40,3 +40,5 @@ require('proof')(1, okay => {
 // with the Paxos-backed atomic log Compassion. Read through the [annotated
 // Docco](https://bigeasy.github.io/addendum/docco/addendum.js.html)
 // for an understanding of message ordering and map/reduce.
+//
+// Proof-of-concept implementation of [etcd v2 API](https://etcd.io/docs/v2.3/api/).
