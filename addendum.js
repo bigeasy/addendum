@@ -307,16 +307,16 @@ class Addendum {
                                 this.calendar.schedule(when, entry.body.path, { cookie })
                                 this.conference.map(cookie, { method: 'ttl', key: key })
                             }
-                            // File and directory nodes have different properties.
-                            if (entry.body.dir) {
-                                response.node.dir = entry.body.dir
-                            } else {
-                                response.node.value = entry.body.value
-                            }
                             // If we had a value, set the previous node property.
                             if (got != null) {
                                 response.prevNode = got.node
                                 response.node.createdIndex = response.prevNode.createdIndex
+                            }
+                            // File and directory nodes have different properties.
+                            if (entry.body.dir) {
+                                response.node.dir = true
+                            } else {
+                                response.node.value = entry.body.refresh ? got.node.value : entry.body.value
                             }
                             // Log the entry.
                             this.log.add(response)
@@ -722,6 +722,7 @@ class Addendum {
                         method: 'set',
                         path: key,
                         value: body.value,
+                        refresh: body.refresh == 'true',
                         ttl: coalesce(body.ttl),
                         dir: body.dir == 'true',
                         cookie
