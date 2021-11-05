@@ -20,7 +20,7 @@
     "dependencies":
     {
                             "compassion":                   "2.0.0-alpha.20",
-                            "conference":                   "0.27.0-alpha.2",
+                            "conference":                   "0.27.0-alpha.3",
                             "cubbyhole":                    "4.0.8",
                             "destructible":                 "7.0.0-alpha.71",
                             "happenstance":                 "13.0.0-alpha.0",
