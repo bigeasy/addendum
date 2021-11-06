@@ -350,9 +350,11 @@ require('proof')(19, async okay => {
                 data: qs.stringify({ value: 'x', ttl: 1 }),
                 url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
             })
+            delete response.data.node.expiration
             okay(response.data, {
                 action: 'set',
                 node: {
+                    ttl: 1,
                     key: '/x',
                     value: 'x',
                     createdIndex: 7,
@@ -367,15 +369,19 @@ require('proof')(19, async okay => {
                 data: qs.stringify({ value: 'x', ttl: 1 }),
                 url: url.resolve(participants[0].url.addendum, '/v2/keys/x')
             })
+            delete response.data.node.expiration
+            delete response.data.prevNode.expiration
             okay(response.data, {
                 action: 'set',
                 node: {
+                    ttl: 1,
                     key: '/x',
                     value: 'x',
                     createdIndex: 7,
                     modifiedIndex: 8
                 },
                 prevNode: {
+                    ttl: 1,
                     key: '/x',
                     value: 'x',
                     createdIndex: 7,
