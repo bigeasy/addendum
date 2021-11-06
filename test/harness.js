@@ -69,7 +69,7 @@ function etcd (count, f) {
             static name = 'etcd'
 
             static async create (destructible) {
-                return `http://${config.HostIP}:2379`
+                return `http://${config.ETCD_HOST_IP}:2379`
             }
         }
 

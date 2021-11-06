@@ -42,3 +42,10 @@ require('proof')(1, okay => {
 // for an understanding of message ordering and map/reduce.
 //
 // Proof-of-concept implementation of [etcd v2 API](https://etcd.io/docs/v2.3/api/).
+//
+// ## Development
+//
+// Some of the tests test against both `etcd` and Addendum if there is a
+// `test/etcd.config.json` file that contains an object with a single
+// `ETCD_HOST_IP` property. This assumes that `etcd` is running on its default
+// port.
