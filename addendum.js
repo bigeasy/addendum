@@ -323,6 +323,7 @@ class Addendum {
                             if (entry.body.refresh && entry.body.prevExist) {
                                 response.action = 'update'
                             }
+                            // If we have a previous value parameter this is a compare and set.
                             if (
                                 entry.body.prevValue != null
                             ) {
@@ -416,6 +417,14 @@ class Addendum {
                                 // Add the previous value node to the response.
                                 response.prevNode = got.node
                                 response.node.createdIndex = response.prevNode.createdIndex
+                            }
+                            // If we have a previous value parameter this is a compare and
+                            // delete.
+                            if (entry.body.prevValue != null) {
+                                if (got.node.value != entry.body.prevValue) {
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                }
+                                response.action = 'compareAndDelete'
                             }
                             // Log the entry.
                             this.log.add(response)
@@ -763,6 +772,7 @@ class Addendum {
                     body: {
                         method: 'delete',
                         dir: request.query.dir == 'true',
+                        prevValue: coalesce(request.query.prevValue),
                         recursive: request.query.recursive == 'true',
                         path: key,
                         cookie

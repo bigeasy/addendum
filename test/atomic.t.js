@@ -1,5 +1,5 @@
 // Count of tests for a single pass of tests for either `etcd` or Addendum.
-const count = 5
+const count = 7
 
 // Our test harness will optionally test against `etcd`.
 const harness = require('./harness')
@@ -30,7 +30,7 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
         }, 'create key')
     }
 
-    // Failure of atomic set condition.
+    // Failure of atomic compare and set.
     {
         const response = await GET('/v2/keys/addendum/atomic/x')
         okay(prune(response), {
@@ -42,7 +42,7 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
         }, 'get key')
     }
 
-    // Failure of atomic set condition.
+    // Failure of atomic compare and set.
     {
         const response = await PUT('/v2/keys/addendum/atomic/x?prevValue=y', { value: 'x' })
         okay(prune(response), {
@@ -51,7 +51,7 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
         }, 'atomic set compare failure')
     }
 
-    // Success of atomic set condition.
+    // Success of atomic compare and set.
     {
         const response = await PUT('/v2/keys/addendum/atomic/x?prevValue=x', { value: 'y' })
         okay(prune(response), {
@@ -60,6 +60,28 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
                 action: 'compareAndSwap',
                 node: { key: '/addendum/atomic/x', value: 'y' },
                 prevNode: { key: '/addendum/atomic/x', value: 'x' }
+            }
+        }, 'atomic set compare')
+    }
+
+    // Failure of atomic compare and delete.
+    {
+        const response = await DELETE('/v2/keys/addendum/atomic/x?prevValue=x')
+        okay(prune(response), {
+            status: 412,
+            data: { errorCode: 101, message: 'Compare failed', cause: '[x != y]' }
+        }, 'atomic set compare')
+    }
+
+    // Success of atomic compare and delete.
+    {
+        const response = await DELETE('/v2/keys/addendum/atomic/x?prevValue=y')
+        okay(prune(response), {
+            status: 200,
+            data: {
+                action: 'compareAndDelete',
+                node: { key: '/addendum/atomic/x' },
+                prevNode: { key: '/addendum/atomic/x', value: 'y' }
             }
         }, 'atomic set compare')
     }
