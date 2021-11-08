@@ -318,11 +318,27 @@ class Addendum {
                             } else {
                                 response.node.value = entry.body.refresh ? got.node.value : entry.body.value
                             }
+                            // If this is both a `refresh` with a `prevExist` then the action is
+                            // update and we shold not trigger any waits.
                             if (entry.body.refresh && entry.body.prevExist) {
                                 response.action = 'update'
                             }
+                            if (
+                                entry.body.prevValue != null
+                            ) {
+                                if (
+                                    // **TODO** got is null
+                                    // **TODO** got is dir
+                                    // **TODO** we have no refresh stuff set
+                                    entry.body.prevValue != got.node.value
+                                ) {
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                }
+                                response.action = 'compareAndSwap'
+                            }
                             // Log the entry.
                             this.log.add(response)
+                            // **TODO** if (response.action != 'update') {
                             // Ensure that there is a path of directories to the key, creating
                             // any directories that are missing. Note that we checked above to
                             // ensure that there is not a file in the path.
@@ -708,8 +724,12 @@ class Addendum {
     // Our HTTP ingress for key requests. The request is enqueued into the
     // atomic log from the participant that handled the request in a `"map"`
     // message. These will be handled in the `entry` method above. We create a
-    // Promise (Future wraps a Promise) to await the map/reduce. The reduce will
-    // ensure that all participants have written the value.
+    // Promise (a Future wraps a Promise) to await the map/reduce. The reduce
+    // will ensure that all participants have written the value.
+
+    // As you can see, this method merely converts the HTTP request into a
+    // message that is enqueued into Paxos. It then waits on future that will be
+    // triggered when the mapped request reduces.
 
     //
     keys (request) {
@@ -725,6 +745,7 @@ class Addendum {
                         method: 'set',
                         path: key,
                         value: body.value,
+                        prevValue: coalesce(request.query.prevValue),
                         refresh: body.refresh == 'true',
                         prevExist: body.prevExist == 'true',
                         ttl: coalesce(body.ttl),

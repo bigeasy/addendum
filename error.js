@@ -1,6 +1,8 @@
 const MESSAGES = new Map([[
     100, 'Key not found'
 ], [
+    101, 'Compare failed'
+], [
     102, 'Not a file'
 ], [
     104, 'Not a directory'
