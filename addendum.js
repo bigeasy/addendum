@@ -111,6 +111,10 @@ class Addendum {
             method: 'put',
             f: this.keys.bind(this)
         }, {
+            path: '/v2/keys/*',
+            method: 'post',
+            f: this.keys.bind(this)
+        }, {
             path: '/v2/keys',
             method: 'put',
             f: this.root.bind(this)
@@ -359,6 +363,7 @@ class Addendum {
                                 }
                             }
                             // Set the key.
+                            // **TODO** Get rid of nested body.
                             wildmap.set(key, { dir: entry.body.dir, node: response.node })
                             // Do we have anyone waiting? Notify any GET requests waiting on
                             // change notifications.
@@ -370,6 +375,42 @@ class Addendum {
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ got == null ? 201 : 200, response, { 'X-Etcd-Index': this.log.index } ]
+                            })
+                        }
+                        break
+                    // The `'create'` message indicates that we want to create an
+                    // automatic key in a directory.
+                    case 'create': {
+                            // Create a path from the Fastify pattern match.
+                            const path = `/${entry.body.path}`
+                            // Create a key from the path.
+                            const key = path.split('/')
+                            // If the key does not exist 404.
+                            const got = this._wildmap.get(key)
+                            if (got == null) {
+                                throw this._404ed(key)
+                            }
+                            // Get the next index.
+                            const index = this.log.length
+                            // Create our generated key.
+                            const create = `${path}/${String(index).padStart(20, '0')}`.split('/')
+                            // Create the response.
+                            const response = {
+                                action: 'create',
+                                node: {
+                                    key: create.join('/'),
+                                    value: entry.body.value,
+                                    createdIndex: index,
+                                    modifiedIndex: index
+                                }
+                            }
+                            // Log the entry.
+                            this.log.add(response)
+                            // Set the key.
+                            this._wildmap.set(create, { dir: false, node: response.node })
+                            this.conference.map(entry.body.cookie, {
+                                method: 'edit',
+                                response: [ 201, response, { 'X-Etcd-Index': this.log.index }]
                             })
                         }
                         break
@@ -744,10 +785,27 @@ class Addendum {
     keys (request) {
         const key = request.params['*']
         const body = request.body
+        const cookie = `${this.compassion.id}/${this._cookie++}`
+        const future = this._futures[cookie] = new Future
         switch (request.method) {
+        case 'POST': {
+                this.compassion.enqueue({
+                    method: 'map',
+                    body: {
+                        method: 'create',
+                        path: key,
+                        value: body.value,
+                        prevValue: coalesce(request.query.prevValue),
+                        refresh: body.refresh == 'true',
+                        prevExist: body.prevExist == 'true',
+                        ttl: coalesce(body.ttl),
+                        dir: body.dir == 'true',
+                        cookie
+                    }
+                })
+                return future.promise
+            }
         case 'PUT': {
-                const cookie = `${this.compassion.id}/${this._cookie++}`
-                const future = this._futures[cookie] = new Future
                 this.compassion.enqueue({
                     method: 'map',
                     body: {
@@ -765,8 +823,6 @@ class Addendum {
                 return future.promise
             }
         case 'DELETE': {
-                const cookie = `${this.compassion.id}/${this._cookie++}`
-                const future = this._futures[cookie] = new Future
                 this.compassion.enqueue({
                     method: 'map',
                     body: {

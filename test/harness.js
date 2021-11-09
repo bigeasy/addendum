@@ -154,6 +154,15 @@ function etcd (count, f) {
                 })
             }
 
+            function POST (path, body) {
+                return HTTP({
+                    method: 'POST',
+                    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+                    data: qs.stringify(body),
+                    url: location + path
+                })
+            }
+
             function PUT (path, body) {
                 return HTTP({
                     method: 'PUT',
@@ -164,7 +173,7 @@ function etcd (count, f) {
             }
 
             destructible.durable('test', async () => {
-                await f(okay, { location, GET, PUT, DELETE, prune, controller: Controller.name })
+                await f(okay, { location, GET, POST, PUT, DELETE, prune, controller: Controller.name })
                 destructible.destroy()
             })
 
