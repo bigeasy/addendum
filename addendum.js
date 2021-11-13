@@ -414,6 +414,26 @@ class Addendum {
                             })
                         }
                         break
+                    // The `'get'` message indicates a quorum get.
+                    case 'get': {
+                            // Create a path from the Fastify pattern match.
+                            const path = `/${entry.body.path}`
+                            // Create a key from the path.
+                            const key = path.split('/')
+                            // Get the key value.
+                            const got = this._wildmap.get(key)
+                            // If the key does not exist 404.
+                            if (got == null) {
+                                throw this._404ed(key)
+                            }
+                            // Create the response.
+                            const response = { action: 'get', node: got.node }
+                            this.conference.map(entry.body.cookie, {
+                                method: 'edit',
+                                response: [ 200, response, { 'X-Etcd-Index': this.log.index } ]
+                            })
+                        }
+                        break
                     // The `'delete'` message indicates that we want to delete a key/value.
                     case 'delete': {
                             // Create a path from the Fastify pattern match.
@@ -584,7 +604,7 @@ class Addendum {
     // object containing the reduce response from each of the participants.
 
     //
-    reduce (reductions) {
+   reduce (reductions) {
         // For each reduction we switch on the name of the method in the mapped
         // object.
         for (const reduction of reductions) {
@@ -668,6 +688,21 @@ class Addendum {
     get (request, reply) {
         const path = request.params['*'] == null ? '/' : `/${request.params['*']}`
         const key = path == '/' ? [ '' ] : path.split('/')
+        // **TODO** What if there is `wait` and `waitIndex`?
+        if (request.query.quorum == 'true') {
+            const cookie = `${this.compassion.id}/${this._cookie++}`
+            const future = this._futures[cookie] = new Future
+            this.compassion.enqueue({
+                method: 'map',
+                body: {
+                    method: 'get',
+                    // **TODO** Standardize across all queries.
+                    path: path.substring(1),
+                    cookie
+                }
+            })
+            return future.promise
+        }
         // TODO Seems like wait index will skip a directory creation, whereas
         // long poll wait will not.
         // **TODO** Check that we have a decent path and what sort of errors we
