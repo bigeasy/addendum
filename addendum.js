@@ -14,6 +14,12 @@ const Reactor = require('reactor')
 
 const Conference = require('conference')
 
+// Comparator function builder.
+const ascension = require('ascension')
+
+// A comparator decorator that extracts values for comparison.
+const whittle = require('whittle')
+
 // An event scheduler to manage multiple timed events inside a calendar using a
 // single `setTimeout`.
 const { Calendar, Timer } = require('happenstance')
@@ -31,6 +37,8 @@ const WildMap = require('wildmap')
 const Log = require('./log')
 
 const AddendumError = require('./error')
+
+const sort = whittle(ascension(String), node => node.key)
 
 // Compassion applications are implemented as a class that implements a specific
 // interface of `async`/`await` functions. Addendum is an implementation of the
@@ -792,6 +800,7 @@ class Addendum {
                     } ]
                 }
             }
+            const sorted = request.query.sorted == 'true' ? listing.sort(sort) : listing
             return {
                 action: 'get',
                 node: {

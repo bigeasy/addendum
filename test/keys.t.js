@@ -2,7 +2,7 @@
 // **TODO** Does the root key exist on a fresh boot of `etcd` and if so what is
 // its index and value?
 
-const count = 32
+const count = 33
 
 const harness = require('./harness')
 
@@ -133,6 +133,27 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
                 }
             }
         }, 'list directory with vivified directory')
+    }
+
+    {
+        const response = await GET('/v2/keys/addendum?sorted=true')
+        okay(prune(response), {
+            status: 200,
+            data: {
+                action: 'get',
+                node: {
+                    dir: true,
+                    key: '/addendum',
+                    nodes: [{
+                        key: '/addendum/x',
+                        value: 'y'
+                    }, {
+                        key: '/addendum/y',
+                        dir: true
+                    }]
+                }
+            }
+        }, 'list directory with vivified directory sorted')
     }
 
     {
