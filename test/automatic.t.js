@@ -1,5 +1,5 @@
 // Count of tests for a single pass of tests for either `etcd` or Addendum.
-const count = 6
+const count = 5
 
 // Count of tests for a single pass of tests for either `etcd` or Addendum.
 const harness = require('./harness')
@@ -50,13 +50,14 @@ async function test (okay, { POST, DELETE, GET, PUT, prune }) {
         // expected key.
         const pruned = prune(response)
         key = pruned.data.node.key
-        delete pruned.data.node.key
-        okay(/^\/addendum\/queue\/0\d{19}$/.test(key), 'generated key')
         okay(pruned, {
             status: 201,
             data: {
                 action: 'create',
-                node: { value: 'x' }
+                node: {
+                    value: 'x',
+                    key: `/addendum/queue/${response.headers['x-etcd-index'].padStart(20, '0')}`
+                }
             }
         }, 'get empty root directory')
     }
