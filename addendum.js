@@ -55,7 +55,7 @@ class Addendum {
         // Our tree of keys.
         this._wildmap = new WildMap
         // The root key is read-only and has no version (index) information.
-        this._wildmap.set([ '' ], { dir: true, node: { dir: true } })
+        this._wildmap.set([ '' ], { dir: true })
         // Our tree of long polling waits for changes.
         this._waiting = new WildMap
         // **TOOD** This is wrong. We need snapshot and join inside the log.
@@ -198,9 +198,9 @@ class Addendum {
         this.conference.arrive(arrival.promise)
         this._snapshots[arrival.promise] = {
             nodes: this._wildmap.glob([ '', this._wildmap.recursive ])
-                .map(key => ({ key, body: this._wildmap.get(key) }))
-                .filter(({ key, body }) => ! body.dir)
-                .map(({ key, body }) => ({ key: key.join('/'), value: body.value })),
+                .map(key => ({ key, value: this._wildmap.get(key) }))
+                .filter(({ key, value }) => ! body.dir)
+                .map(({ key, body }) => ({ key: key.join('/'), value })),
             index: this._index
         }
         if (! this.ready.fulfilled) {
@@ -321,14 +321,14 @@ class Addendum {
                             }
                             // If we had a value, set the previous node property.
                             if (got != null) {
-                                response.prevNode = got.node
+                                response.prevNode = got
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // File and directory nodes have different properties.
                             if (entry.body.dir) {
                                 response.node.dir = true
                             } else {
-                                response.node.value = entry.body.refresh ? got.node.value : entry.body.value
+                                response.node.value = entry.body.refresh ? got.value : entry.body.value
                             }
                             // If this is both a `refresh` with a `prevExist` then the action is
                             // update and we shold not trigger any waits.
@@ -343,9 +343,9 @@ class Addendum {
                                     // **TODO** got is null
                                     // **TODO** got is dir
                                     // **TODO** we have no refresh stuff set
-                                    entry.body.prevValue != got.node.value
+                                    entry.body.prevValue != got.value
                                 ) {
-                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.value}]`)
                                 }
                                 response.action = 'compareAndSwap'
                             }
@@ -360,19 +360,15 @@ class Addendum {
                                 const got = wildmap.get(key.slice(0, i))
                                 if (got == null) {
                                     wildmap.set(key.slice(0, i), {
+                                        key: key.slice(0, i).join('/'),
                                         dir: true,
-                                        node: {
-                                            key: key.slice(0, i).join('/'),
-                                            dir: true,
-                                            createdIndex: this.log.index,
-                                            modifiedIndex: this.log.index
-                                        }
+                                        createdIndex: this.log.index,
+                                        modifiedIndex: this.log.index
                                     })
                                 }
                             }
                             // Set the key.
-                            // **TODO** Get rid of nested body.
-                            wildmap.set(key, { dir: entry.body.dir, node: response.node })
+                            wildmap.set(key, response.node)
                             // Do we have anyone waiting? Notify any GET requests waiting on
                             // change notifications.
                             this.notify(key, response)
@@ -415,7 +411,7 @@ class Addendum {
                             // Log the entry.
                             this.log.add(response)
                             // Set the key.
-                            this._wildmap.set(create, { dir: false, node: response.node })
+                            this._wildmap.set(create, response.node)
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ 201, response, { 'X-Etcd-Index': this.log.index }]
@@ -435,7 +431,7 @@ class Addendum {
                                 throw this._404ed(key)
                             }
                             // Create the response.
-                            const response = { action: 'get', node: got.node }
+                            const response = { action: 'get', node: got }
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ 200, response, { 'X-Etcd-Index': this.log.index } ]
@@ -484,14 +480,14 @@ class Addendum {
                                     response.node.dir = true
                                 }
                                 // Add the previous value node to the response.
-                                response.prevNode = got.node
+                                response.prevNode = got
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // If we have a previous value parameter this is a compare and
                             // delete.
                             if (entry.body.prevValue != null) {
-                                if (got.node.value != entry.body.prevValue) {
-                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                if (got.value != entry.body.prevValue) {
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.value}]`)
                                 }
                                 response.action = 'compareAndDelete'
                             }
@@ -730,11 +726,11 @@ class Addendum {
                 }
             }
             const through = new stream.PassThrough({ emitClose: true })
-            let got = this._waiting.get(key)
-            if (got == null) {
-                this._waiting.set(key, got = [])
+            let wait = this._waiting.get(key)
+            if (wait == null) {
+                this._waiting.set(key, wait = [])
             }
-            got.push({ recursive: request.query.recursive == 'true', through: through })
+            wait.push({ recursive: request.query.recursive == 'true', through: through })
             reply.code(200)
             reply.headers({
                 'Connection': 'close',
@@ -753,7 +749,7 @@ class Addendum {
             if (listing.length == 0) {
                 return [ 200, {
                     action: 'get',
-                    node: got.node
+                    node: got
                 }, {
                     'X-Etcd-Index': this.log.index
                 }]
@@ -781,7 +777,7 @@ class Addendum {
                     const gathered = []
                     for (const name in children) {
                         const child = children[name]
-                        const node = { ...child.node.node }
+                        const node = { ...child.node }
                         const nodes = descend(child.children)
                         if (nodes.length != 0) {
                             node.nodes = nodes
@@ -794,24 +790,27 @@ class Addendum {
                 if (nodes != null) {
                     return [ 200, {
                         action: 'get',
-                        node: { ...got.node, nodes }
+                        node: { ...got, nodes }
                     }, {
                         'X-Etcd-Index': this.log.index
                     } ]
                 }
             }
-            const sorted = request.query.sorted == 'true' ? listing.sort(sort) : listing
+            const sorted = listing.map(key => this._wildmap.get(key))
+            if (request.query.sorted == 'true') {
+                listing.sort(sort)
+            }
             return {
                 action: 'get',
                 node: {
-                    ...got.node,
-                    nodes: listing.map(key => this._wildmap.get(key).node)
+                    ...got,
+                    nodes: sorted
                 }
             }
         }
         return {
             action: 'get',
-            node: got.node
+            node: got
         }
     }
 
