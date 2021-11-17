@@ -1,5 +1,5 @@
 // Count of tests for a single pass of tests for either `etcd` or Addendum.
-const count = 5
+const count = 6
 
 // Our test harness will optionally test against `etcd`.
 const harness = require('./harness')
@@ -54,12 +54,22 @@ async function test (okay, { DELETE, GET, PUT, prune }) {
         }, 'set key')
     }
 
+    // Linear read of key.
     {
         const response = await GET('/v2/keys/addendum/quorum/x?quorum=true')
         okay(prune(response), {
             status: 200,
             data: { action: 'get', node: { key: '/addendum/quorum/x', value: 'x' } }
         }, 'quorum get')
+    }
+
+    // Linear read and wait means wait is a noop.
+    {
+        const response = await GET('/v2/keys/addendum/quorum/x?quorum=true&wait=true')
+        okay(prune(response), {
+            status: 200,
+            data: { action: 'get', node: { key: '/addendum/quorum/x', value: 'x' } }
+        }, 'quorum get with wait parameter')
     }
 }
 

@@ -683,6 +683,15 @@ class Addendum {
         return new AddendumError(400, 107, '/').response(this.log.index)
     }
 
+    _got (request) {
+        const path = request.params['*'] == null ? '/' : `/${request.params['*']}`
+        const key = path == '/' ? [ '' ] : path.split('/')
+        const quorum = request.query.quorum == 'true'
+        const wait = request.query.wait == 'true'
+        const waitIndex = request.query.waitIndex == null ? null : parseInt(request.query.waitIndex, 10)
+        return { path, key, quorum, wait, waitIndex }
+    }
+
     // When we have a get request we send the value of the current participant.
     // We do not run any messages through the atomic log. Your application may
     // require that reads be ordered as well as writes. It doesn't appear that
@@ -690,10 +699,9 @@ class Addendum {
 
     //
     get (request, reply) {
-        const path = request.params['*'] == null ? '/' : `/${request.params['*']}`
-        const key = path == '/' ? [ '' ] : path.split('/')
+        const params = this._got(request)
         // **TODO** What if there is `wait` and `waitIndex`?
-        if (request.query.quorum == 'true') {
+        if (params.quorum) {
             const cookie = `${this.compassion.id}/${this._cookie++}`
             const future = this._futures[cookie] = new Future
             this.compassion.enqueue({
@@ -701,7 +709,7 @@ class Addendum {
                 body: {
                     method: 'get',
                     // **TODO** Standardize across all queries.
-                    path: path.substring(1),
+                    path: params.path.substring(1),
                     cookie
                 }
             })
@@ -711,24 +719,23 @@ class Addendum {
         // long poll wait will not.
         // **TODO** Check that we have a decent path and what sort of errors we
         // get.
-        if (request.query.wait == 'true') {
-            if (request.query.waitIndex != null) {
-                const waitIndex = parseInt(request.query.waitIndex, 10)
+        if (params.wait) {
+            if (params.waitIndex != null) {
                 const recursive = request.query.recursive == 'true'
-                const found = this.log.find(waitIndex, recursive ? response => {
-                    return response.node.key.startsWith(`${path}/`)
-                    return response.node.key == path || response.node.key.startsWith(`${path}/`)
+                const found = this.log.find(params.waitIndex, recursive ? response => {
+                    return response.node.key.startsWith(`${params.path}/`)
+                    return response.node.key == params.path || response.node.key.startsWith(`${params.path}/`)
                 } : response => {
-                    return response.node.key == path
+                    return response.node.key == params.path
                 })
                 if (found.length != 0) {
                     return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
                 }
             }
             const through = new stream.PassThrough({ emitClose: true })
-            let wait = this._waiting.get(key)
+            let wait = this._waiting.get(params.key)
             if (wait == null) {
-                this._waiting.set(key, wait = [])
+                this._waiting.set(params.key, wait = [])
             }
             wait.push({ recursive: request.query.recursive == 'true', through: through })
             reply.code(200)
@@ -739,13 +746,13 @@ class Addendum {
             reply.send(through)
             return
         }
-        const got = this._wildmap.get(key)
+        const got = this._wildmap.get(params.key)
         if (got == null) {
-            return this._404ed(key).response(this.log.index)
+            return this._404ed(params.key).response(this.log.index)
         }
         if (got.dir) {
             const recursive = request.query.recursive == 'true'
-            const listing = this._wildmap.glob(key.concat(recursive ? this._wildmap.recursive : this._wildmap.single))
+            const listing = this._wildmap.glob(params.key.concat(recursive ? this._wildmap.recursive : this._wildmap.single))
             if (listing.length == 0) {
                 return [ 200, {
                     action: 'get',
@@ -770,7 +777,7 @@ class Addendum {
                     }
                 }
                 let start = tree
-                for (const part of key) {
+                for (const part of params.key) {
                     start = start.children[part]
                 }
                 function descend (children) {
