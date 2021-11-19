@@ -72,7 +72,7 @@ class Addendum {
         // snapshot through the `snapshot` method. (TODO Maybe move these words
         // to the snapshot method.)
         this._snapshots = {}
-        // The compassion object set on initalize.
+        // The compassion object set on initialize.
         this.compassion = null
         // A calendar used to schedule timed events, specifically the `ttl`
         // expiration of keys.
@@ -183,7 +183,7 @@ class Addendum {
         await snapshot.shift()
     }
 
-    // **TODO** `arrvial.promise` should be `arrival.arrived`.
+    // **TODO** `arrival.promise` should be `arrival.arrived`.
 
     //
 
@@ -286,7 +286,7 @@ class Addendum {
                             if (got != null && got.dir) {
                                 throw new AddendumError(403, 102, key.join('/'))
                             }
-                            // If we already have a ttl set for this key we need to notify the
+                            // If we already have a TTL set for this key we need to notify the
                             // other participants that it is going to be reset. This will
                             // cancel the `ttl` deletion even if other participants have had
                             // their timers fire and have enqueued a `ttl` timeout because
@@ -308,7 +308,7 @@ class Addendum {
                                     modifiedIndex: index
                                 }
                             }
-                            // If we have ttl in this set request, we schedule the timeout for
+                            // If we have TTL in this set request, we schedule the timeout for
                             // the TTL and map a cookie so we can countdown all the timers or
                             // cancellations of all the participants before actually deleting.
                             if (entry.body.ttl != null) {
@@ -331,7 +331,7 @@ class Addendum {
                                 response.node.value = entry.body.refresh ? got.value : entry.body.value
                             }
                             // If this is both a `refresh` with a `prevExist` then the action is
-                            // update and we shold not trigger any waits.
+                            // update and we should not trigger any waits.
                             if (entry.body.refresh && entry.body.prevExist) {
                                 response.action = 'update'
                             }
@@ -586,7 +586,7 @@ class Addendum {
     //
 
     // You'll note that I'm using a lot of `switch`/`case` in this application.
-    // It is my preference to see the logic layed out in this way. It is not
+    // It is my preference to see the logic laid out in this way. It is not
     // always thus. Compassion itself could simply be a queue of messages for
     // you to `switch` through, but I've organized those messages into a series
     // of events that can be documented through an interface.
@@ -596,7 +596,7 @@ class Addendum {
     // Compassion itself with a `map` and `reduce` function instead of `entry`,
     // but quickly found that it was at a different layer of abstraction. For
     // example, how do you reduce in response to the mapping or an arrival or
-    // departure? Thus, entry now has nested `switch` statments inside a `"map"`
+    // departure? Thus, entry now has nested `switch` statements inside a `"map"`
     // and `"reduce"`  `switch` allowing for the application that has a
     // as-of-yet developed notion of how to use an atomic log.
 
@@ -626,9 +626,9 @@ class Addendum {
                 break
             // In the case of TTL, every one of the participants has taken
             // action on a TTL setting for a key. Each participant has either
-            // recieved a timer notification that a TTL has expired or else has
-            // recieved a message to update the TTL or delete the key. Only if
-            // all paritcipants have recived a timer notification do we delete
+            // received a timer notification that a TTL has expired or else has
+            // received a message to update the TTL or delete the key. Only if
+            // all participants have received a timer notification do we delete
             // the key according to the TTL. If any participant tells us to
             // ignore the TTL because it reset it we do not delete the key.
             case 'ttl': {
