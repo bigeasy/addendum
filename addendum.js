@@ -355,11 +355,10 @@ class Addendum {
                             // Ensure that there is a path of directories to the key, creating
                             // any directories that are missing. Note that we checked above to
                             // ensure that there is not a file in the path.
-                            const wildmap = this._wildmap
                             for (let i = 1, I = key.length; i != I; i++) {
-                                const got = wildmap.get(key.slice(0, i))
+                                const got = this._wildmap.get(key.slice(0, i))
                                 if (got == null) {
-                                    wildmap.set(key.slice(0, i), {
+                                    this._wildmap.set(key.slice(0, i), {
                                         key: key.slice(0, i).join('/'),
                                         dir: true,
                                         createdIndex: this.log.index,
@@ -368,7 +367,7 @@ class Addendum {
                                 }
                             }
                             // Set the key.
-                            wildmap.set(key, response.node)
+                            this._wildmap.set(key, response.node)
                             // Do we have anyone waiting? Notify any GET requests waiting on
                             // change notifications.
                             this.notify(key, response)
