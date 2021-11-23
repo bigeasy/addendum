@@ -683,70 +683,19 @@ class Addendum {
         const key = path == '/' ? [ '' ] : path.split('/')
         const quorum = request.query.quorum == 'true'
         const wait = request.query.wait == 'true'
+        const recursive = request.query.recursive == 'true'
         const waitIndex = request.query.waitIndex == null ? null : parseInt(request.query.waitIndex, 10)
-        return { path, key, quorum, wait, waitIndex }
+        const sorted = request.query.sorted == 'true'
+        return { path, key, quorum, wait, waitIndex, recursive, sorted }
     }
 
-    // When we have a get request we send the value of the current participant.
-    // We do not run any messages through the atomic log. Your application may
-    // require that reads be ordered as well as writes. It doesn't appear that
-    // this is necessary for `etcd`.
-
-    //
-    get (request, reply) {
-        const params = this._got(request)
-        // **TODO** What if there is `wait` and `waitIndex`?
-        if (params.quorum) {
-            const cookie = `${this.compassion.id}/${this._cookie++}`
-            const future = this._futures[cookie] = new Future
-            this.compassion.enqueue({
-                method: 'map',
-                body: {
-                    method: 'get',
-                    params: params,
-                    cookie
-                }
-            })
-            return future.promise
-        }
-        // TODO Seems like wait index will skip a directory creation, whereas
-        // long poll wait will not.
-        // **TODO** Check that we have a decent path and what sort of errors we
-        // get.
-        if (params.wait) {
-            if (params.waitIndex != null) {
-                const recursive = request.query.recursive == 'true'
-                const found = this.log.find(params.waitIndex, recursive ? response => {
-                    return response.node.key.startsWith(`${params.path}/`)
-                    return response.node.key == params.path || response.node.key.startsWith(`${params.path}/`)
-                } : response => {
-                    return response.node.key == params.path
-                })
-                if (found.length != 0) {
-                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
-                }
-            }
-            const through = new stream.PassThrough({ emitClose: true })
-            let wait = this._waiting.get(params.key)
-            if (wait == null) {
-                this._waiting.set(params.key, wait = [])
-            }
-            wait.push({ recursive: request.query.recursive == 'true', through: through })
-            reply.code(200)
-            reply.headers({
-                'Connection': 'close',
-                'Content-Type': 'application/json'
-            })
-            reply.send(through)
-            return
-        }
+    _get (params) {
         const got = this._wildmap.get(params.key)
         if (got == null) {
             return this._404ed(params.key).response(this.log.index)
         }
         if (got.dir) {
-            const recursive = request.query.recursive == 'true'
-            const listing = this._wildmap.glob(params.key.concat(recursive ? this._wildmap.recursive : this._wildmap.single))
+            const listing = this._wildmap.glob(params.key.concat(params.recursive ? this._wildmap.recursive : this._wildmap.single))
             if (listing.length == 0) {
                 return [ 200, {
                     action: 'get',
@@ -755,7 +704,7 @@ class Addendum {
                     'X-Etcd-Index': this.log.index
                 }]
             }
-            if (recursive) {
+            if (params.recursive) {
                 const sorted = listing.sort((left, right) => left.length - right.length)
                 const tree = { children: {} }
                 for (const key of sorted) {
@@ -798,7 +747,7 @@ class Addendum {
                 }
             }
             const sorted = listing.map(key => this._wildmap.get(key))
-            if (request.query.sorted == 'true') {
+            if (params.sorted) {
                 listing.sort(sort)
             }
             return {
@@ -813,6 +762,61 @@ class Addendum {
             action: 'get',
             node: got
         }
+    }
+
+    // When we have a get request we send the value of the current participant.
+    // We do not run any messages through the atomic log. Your application may
+    // require that reads be ordered as well as writes. It doesn't appear that
+    // this is necessary for `etcd`.
+
+    //
+    get (request, reply) {
+        const params = this._got(request)
+        // **TODO** What if there is `wait` and `waitIndex`?
+        if (params.quorum) {
+            const cookie = `${this.compassion.id}/${this._cookie++}`
+            const future = this._futures[cookie] = new Future
+            this.compassion.enqueue({
+                method: 'map',
+                body: {
+                    method: 'get',
+                    params: params,
+                    cookie
+                }
+            })
+            return future.promise
+        }
+        // TODO Seems like wait index will skip a directory creation, whereas
+        // long poll wait will not.
+        // **TODO** Check that we have a decent path and what sort of errors we
+        // get.
+        if (params.wait) {
+            if (params.waitIndex != null) {
+                const found = this.log.find(params.waitIndex, params.recursive ? response => {
+                    return response.node.key.startsWith(`${params.path}/`)
+                    return response.node.key == params.path || response.node.key.startsWith(`${params.path}/`)
+                } : response => {
+                    return response.node.key == params.path
+                })
+                if (found.length != 0) {
+                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
+                }
+            }
+            const through = new stream.PassThrough({ emitClose: true })
+            let wait = this._waiting.get(params.key)
+            if (wait == null) {
+                this._waiting.set(params.key, wait = [])
+            }
+            wait.push({ recursive: params.recursive, through: through })
+            reply.code(200)
+            reply.headers({
+                'Connection': 'close',
+                'Content-Type': 'application/json'
+            })
+            reply.send(through)
+            return
+        }
+        return this._get(params)
     }
 
     // Our HTTP ingress for key requests. The request is enqueued into the
