@@ -419,15 +419,11 @@ class Addendum {
                         break
                     // The `'get'` message indicates a quorum get.
                     case 'get': {
-                            // Create a path from the Fastify pattern match.
-                            const path = `/${entry.body.path}`
-                            // Create a key from the path.
-                            const key = path.split('/')
                             // Get the key value.
-                            const got = this._wildmap.get(key)
+                            const got = this._wildmap.get(entry.body.params.key)
                             // If the key does not exist 404.
                             if (got == null) {
-                                throw this._404ed(key)
+                                throw this._404ed(entry.body.param.key)
                             }
                             // Create the response.
                             const response = { action: 'get', node: got }
@@ -707,8 +703,7 @@ class Addendum {
                 method: 'map',
                 body: {
                     method: 'get',
-                    // **TODO** Standardize across all queries.
-                    path: params.path.substring(1),
+                    params: params,
                     cookie
                 }
             })
