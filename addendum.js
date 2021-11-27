@@ -758,9 +758,14 @@ class Addendum {
                 }
             }
         }
-        return {
+        try {
+        return [ 200, {
             action: 'get',
             node: got
+        }, { 'X-Etcd-Index': this.log.index } ]
+        } catch (error) {
+            console.log(error.stack)
+            throw error
         }
     }
 
