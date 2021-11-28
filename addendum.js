@@ -758,15 +758,10 @@ class Addendum {
                 }
             }
         }
-        try {
         return [ 200, {
             action: 'get',
             node: got
         }, { 'X-Etcd-Index': this.log.index } ]
-        } catch (error) {
-            console.log(error.stack)
-            throw error
-        }
     }
 
     // When we have a get request we send the value of the current participant.
