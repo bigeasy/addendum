@@ -14,6 +14,12 @@ const Reactor = require('reactor')
 
 const Conference = require('conference')
 
+// Comparator function builder.
+const ascension = require('ascension')
+
+// A comparator decorator that extracts values for comparison.
+const whittle = require('whittle')
+
 // An event scheduler to manage multiple timed events inside a calendar using a
 // single `setTimeout`.
 const { Calendar, Timer } = require('happenstance')
@@ -32,6 +38,8 @@ const Log = require('./log')
 
 const AddendumError = require('./error')
 
+const sort = whittle(ascension(String), node => node.key)
+
 // Compassion applications are implemented as a class that implements a specific
 // interface of `async`/`await` functions. Addendum is an implementation of the
 // `etcd` v2 API using Compassion. With it you'll be able to see how you might
@@ -47,7 +55,7 @@ class Addendum {
         // Our tree of keys.
         this._wildmap = new WildMap
         // The root key is read-only and has no version (index) information.
-        this._wildmap.set([ '' ], { dir: true, node: { dir: true } })
+        this._wildmap.set([ '' ], { dir: true })
         // Our tree of long polling waits for changes.
         this._waiting = new WildMap
         // **TOOD** This is wrong. We need snapshot and join inside the log.
@@ -64,7 +72,7 @@ class Addendum {
         // snapshot through the `snapshot` method. (TODO Maybe move these words
         // to the snapshot method.)
         this._snapshots = {}
-        // The compassion object set on initalize.
+        // The compassion object set on initialize.
         this.compassion = null
         // A calendar used to schedule timed events, specifically the `ttl`
         // expiration of keys.
@@ -175,7 +183,7 @@ class Addendum {
         await snapshot.shift()
     }
 
-    // **TODO** `arrvial.promise` should be `arrival.arrived`.
+    // **TODO** `arrival.promise` should be `arrival.arrived`.
 
     //
 
@@ -190,9 +198,9 @@ class Addendum {
         this.conference.arrive(arrival.promise)
         this._snapshots[arrival.promise] = {
             nodes: this._wildmap.glob([ '', this._wildmap.recursive ])
-                .map(key => ({ key, body: this._wildmap.get(key) }))
-                .filter(({ key, body }) => ! body.dir)
-                .map(({ key, body }) => ({ key: key.join('/'), value: body.value })),
+                .map(key => ({ key, value: this._wildmap.get(key) }))
+                .filter(({ key, value }) => ! body.dir)
+                .map(({ key, body }) => ({ key: key.join('/'), value })),
             index: this._index
         }
         if (! this.ready.fulfilled) {
@@ -278,7 +286,7 @@ class Addendum {
                             if (got != null && got.dir) {
                                 throw new AddendumError(403, 102, key.join('/'))
                             }
-                            // If we already have a ttl set for this key we need to notify the
+                            // If we already have a TTL set for this key we need to notify the
                             // other participants that it is going to be reset. This will
                             // cancel the `ttl` deletion even if other participants have had
                             // their timers fire and have enqueued a `ttl` timeout because
@@ -300,7 +308,7 @@ class Addendum {
                                     modifiedIndex: index
                                 }
                             }
-                            // If we have ttl in this set request, we schedule the timeout for
+                            // If we have TTL in this set request, we schedule the timeout for
                             // the TTL and map a cookie so we can countdown all the timers or
                             // cancellations of all the participants before actually deleting.
                             if (entry.body.ttl != null) {
@@ -313,17 +321,17 @@ class Addendum {
                             }
                             // If we had a value, set the previous node property.
                             if (got != null) {
-                                response.prevNode = got.node
+                                response.prevNode = got
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // File and directory nodes have different properties.
                             if (entry.body.dir) {
                                 response.node.dir = true
                             } else {
-                                response.node.value = entry.body.refresh ? got.node.value : entry.body.value
+                                response.node.value = entry.body.refresh ? got.value : entry.body.value
                             }
                             // If this is both a `refresh` with a `prevExist` then the action is
-                            // update and we shold not trigger any waits.
+                            // update and we should not trigger any waits.
                             if (entry.body.refresh && entry.body.prevExist) {
                                 response.action = 'update'
                             }
@@ -335,9 +343,9 @@ class Addendum {
                                     // **TODO** got is null
                                     // **TODO** got is dir
                                     // **TODO** we have no refresh stuff set
-                                    entry.body.prevValue != got.node.value
+                                    entry.body.prevValue != got.value
                                 ) {
-                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.value}]`)
                                 }
                                 response.action = 'compareAndSwap'
                             }
@@ -347,24 +355,19 @@ class Addendum {
                             // Ensure that there is a path of directories to the key, creating
                             // any directories that are missing. Note that we checked above to
                             // ensure that there is not a file in the path.
-                            const wildmap = this._wildmap
                             for (let i = 1, I = key.length; i != I; i++) {
-                                const got = wildmap.get(key.slice(0, i))
+                                const got = this._wildmap.get(key.slice(0, i))
                                 if (got == null) {
-                                    wildmap.set(key.slice(0, i), {
+                                    this._wildmap.set(key.slice(0, i), {
+                                        key: key.slice(0, i).join('/'),
                                         dir: true,
-                                        node: {
-                                            key: key.slice(0, i).join('/'),
-                                            dir: true,
-                                            createdIndex: this.log.index,
-                                            modifiedIndex: this.log.index
-                                        }
+                                        createdIndex: this.log.index,
+                                        modifiedIndex: this.log.index
                                     })
                                 }
                             }
                             // Set the key.
-                            // **TODO** Get rid of nested body.
-                            wildmap.set(key, { dir: entry.body.dir, node: response.node })
+                            this._wildmap.set(key, response.node)
                             // Do we have anyone waiting? Notify any GET requests waiting on
                             // change notifications.
                             this.notify(key, response)
@@ -407,10 +410,26 @@ class Addendum {
                             // Log the entry.
                             this.log.add(response)
                             // Set the key.
-                            this._wildmap.set(create, { dir: false, node: response.node })
+                            this._wildmap.set(create, response.node)
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
                                 response: [ 201, response, { 'X-Etcd-Index': this.log.index }]
+                            })
+                        }
+                        break
+                    // The `'get'` message indicates a quorum get.
+                    case 'get': {
+                            // Get the key value.
+                            const got = this._wildmap.get(entry.body.params.key)
+                            // If the key does not exist 404.
+                            if (got == null) {
+                                throw this._404ed(entry.body.param.key)
+                            }
+                            // Create the response.
+                            const response = { action: 'get', node: got }
+                            this.conference.map(entry.body.cookie, {
+                                method: 'edit',
+                                response: [ 200, response, { 'X-Etcd-Index': this.log.index } ]
                             })
                         }
                         break
@@ -456,14 +475,14 @@ class Addendum {
                                     response.node.dir = true
                                 }
                                 // Add the previous value node to the response.
-                                response.prevNode = got.node
+                                response.prevNode = got
                                 response.node.createdIndex = response.prevNode.createdIndex
                             }
                             // If we have a previous value parameter this is a compare and
                             // delete.
                             if (entry.body.prevValue != null) {
-                                if (got.node.value != entry.body.prevValue) {
-                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.node.value}]`)
+                                if (got.value != entry.body.prevValue) {
+                                    throw new AddendumError(412, 101, `[${entry.body.prevValue} != ${got.value}]`)
                                 }
                                 response.action = 'compareAndDelete'
                             }
@@ -563,7 +582,7 @@ class Addendum {
     //
 
     // You'll note that I'm using a lot of `switch`/`case` in this application.
-    // It is my preference to see the logic layed out in this way. It is not
+    // It is my preference to see the logic laid out in this way. It is not
     // always thus. Compassion itself could simply be a queue of messages for
     // you to `switch` through, but I've organized those messages into a series
     // of events that can be documented through an interface.
@@ -573,7 +592,7 @@ class Addendum {
     // Compassion itself with a `map` and `reduce` function instead of `entry`,
     // but quickly found that it was at a different layer of abstraction. For
     // example, how do you reduce in response to the mapping or an arrival or
-    // departure? Thus, entry now has nested `switch` statments inside a `"map"`
+    // departure? Thus, entry now has nested `switch` statements inside a `"map"`
     // and `"reduce"`  `switch` allowing for the application that has a
     // as-of-yet developed notion of how to use an atomic log.
 
@@ -584,7 +603,7 @@ class Addendum {
     // object containing the reduce response from each of the participants.
 
     //
-    reduce (reductions) {
+   reduce (reductions) {
         // For each reduction we switch on the name of the method in the mapped
         // object.
         for (const reduction of reductions) {
@@ -603,9 +622,9 @@ class Addendum {
                 break
             // In the case of TTL, every one of the participants has taken
             // action on a TTL setting for a key. Each participant has either
-            // recieved a timer notification that a TTL has expired or else has
-            // recieved a message to update the TTL or delete the key. Only if
-            // all paritcipants have recived a timer notification do we delete
+            // received a timer notification that a TTL has expired or else has
+            // received a message to update the TTL or delete the key. Only if
+            // all participants have received a timer notification do we delete
             // the key according to the TTL. If any participant tells us to
             // ignore the TTL because it reset it we do not delete the key.
             case 'ttl': {
@@ -659,63 +678,33 @@ class Addendum {
         return new AddendumError(400, 107, '/').response(this.log.index)
     }
 
-    // When we have a get request we send the value of the current participant.
-    // We do not run any messages through the atomic log. Your application may
-    // require that reads be ordered as well as writes. It doesn't appear that
-    // this is necessary for `etcd`.
-
-    //
-    get (request, reply) {
+    _got (request) {
         const path = request.params['*'] == null ? '/' : `/${request.params['*']}`
         const key = path == '/' ? [ '' ] : path.split('/')
-        // TODO Seems like wait index will skip a directory creation, whereas
-        // long poll wait will not.
-        // **TODO** Check that we have a decent path and what sort of errors we
-        // get.
-        if (request.query.wait == 'true') {
-            if (request.query.waitIndex != null) {
-                const waitIndex = parseInt(request.query.waitIndex, 10)
-                const recursive = request.query.recursive == 'true'
-                const found = this.log.find(waitIndex, recursive ? response => {
-                    return response.node.key.startsWith(`${path}/`)
-                    return response.node.key == path || response.node.key.startsWith(`${path}/`)
-                } : response => {
-                    return response.node.key == path
-                })
-                if (found.length != 0) {
-                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
-                }
-            }
-            const through = new stream.PassThrough({ emitClose: true })
-            let got = this._waiting.get(key)
-            if (got == null) {
-                this._waiting.set(key, got = [])
-            }
-            got.push({ recursive: request.query.recursive == 'true', through: through })
-            reply.code(200)
-            reply.headers({
-                'Connection': 'close',
-                'Content-Type': 'application/json'
-            })
-            reply.send(through)
-            return
-        }
-        const got = this._wildmap.get(key)
+        const quorum = request.query.quorum == 'true'
+        const wait = request.query.wait == 'true'
+        const recursive = request.query.recursive == 'true'
+        const waitIndex = request.query.waitIndex == null ? null : parseInt(request.query.waitIndex, 10)
+        const sorted = request.query.sorted == 'true'
+        return { path, key, quorum, wait, waitIndex, recursive, sorted }
+    }
+
+    _get (params) {
+        const got = this._wildmap.get(params.key)
         if (got == null) {
-            return this._404ed(key).response(this.log.index)
+            return this._404ed(params.key).response(this.log.index)
         }
         if (got.dir) {
-            const recursive = request.query.recursive == 'true'
-            const listing = this._wildmap.glob(key.concat(recursive ? this._wildmap.recursive : this._wildmap.single))
+            const listing = this._wildmap.glob(params.key.concat(params.recursive ? this._wildmap.recursive : this._wildmap.single))
             if (listing.length == 0) {
                 return [ 200, {
                     action: 'get',
-                    node: got.node
+                    node: got
                 }, {
                     'X-Etcd-Index': this.log.index
                 }]
             }
-            if (recursive) {
+            if (params.recursive) {
                 const sorted = listing.sort((left, right) => left.length - right.length)
                 const tree = { children: {} }
                 for (const key of sorted) {
@@ -731,14 +720,14 @@ class Addendum {
                     }
                 }
                 let start = tree
-                for (const part of key) {
+                for (const part of params.key) {
                     start = start.children[part]
                 }
                 function descend (children) {
                     const gathered = []
                     for (const name in children) {
                         const child = children[name]
-                        const node = { ...child.node.node }
+                        const node = { ...child.node }
                         const nodes = descend(child.children)
                         if (nodes.length != 0) {
                             node.nodes = nodes
@@ -751,24 +740,83 @@ class Addendum {
                 if (nodes != null) {
                     return [ 200, {
                         action: 'get',
-                        node: { ...got.node, nodes }
+                        node: { ...got, nodes }
                     }, {
                         'X-Etcd-Index': this.log.index
                     } ]
                 }
             }
+            const sorted = listing.map(key => this._wildmap.get(key))
+            if (params.sorted) {
+                listing.sort(sort)
+            }
             return {
                 action: 'get',
                 node: {
-                    ...got.node,
-                    nodes: listing.map(key => this._wildmap.get(key).node)
+                    ...got,
+                    nodes: sorted
                 }
             }
         }
-        return {
+        return [ 200, {
             action: 'get',
-            node: got.node
+            node: got
+        }, { 'X-Etcd-Index': this.log.index } ]
+    }
+
+    // When we have a get request we send the value of the current participant.
+    // We do not run any messages through the atomic log. Your application may
+    // require that reads be ordered as well as writes. It doesn't appear that
+    // this is necessary for `etcd`.
+
+    //
+    get (request, reply) {
+        const params = this._got(request)
+        // **TODO** What if there is `wait` and `waitIndex`?
+        if (params.quorum) {
+            const cookie = `${this.compassion.id}/${this._cookie++}`
+            const future = this._futures[cookie] = new Future
+            this.compassion.enqueue({
+                method: 'map',
+                body: {
+                    method: 'get',
+                    params: params,
+                    cookie
+                }
+            })
+            return future.promise
         }
+        // TODO Seems like wait index will skip a directory creation, whereas
+        // long poll wait will not.
+        // **TODO** Check that we have a decent path and what sort of errors we
+        // get.
+        if (params.wait) {
+            if (params.waitIndex != null) {
+                const found = this.log.find(params.waitIndex, params.recursive ? response => {
+                    return response.node.key.startsWith(`${params.path}/`)
+                    return response.node.key == params.path || response.node.key.startsWith(`${params.path}/`)
+                } : response => {
+                    return response.node.key == params.path
+                })
+                if (found.length != 0) {
+                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
+                }
+            }
+            const through = new stream.PassThrough({ emitClose: true })
+            let wait = this._waiting.get(params.key)
+            if (wait == null) {
+                this._waiting.set(params.key, wait = [])
+            }
+            wait.push({ recursive: params.recursive, through: through })
+            reply.code(200)
+            reply.headers({
+                'Connection': 'close',
+                'Content-Type': 'application/json'
+            })
+            reply.send(through)
+            return
+        }
+        return this._get(params)
     }
 
     // Our HTTP ingress for key requests. The request is enqueued into the
