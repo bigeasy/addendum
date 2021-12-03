@@ -34,7 +34,7 @@
     "devDependencies":
     {
                             "proof":                        "^9.0.3",
-                            "qs":                           "6.10.1"
+                            "qs":                           "6.10.2"
     },
     "main":                 "addendum",
     "scripts":
