@@ -25,7 +25,7 @@
                             "cubbyhole":                    "4.0.8",
                             "destructible":                 "7.0.0-alpha.71",
                             "happenstance":                 "13.0.0-alpha.0",
-                            "fastify-formbody":             "5.1.0",
+                            "fastify-formbody":             "5.2.0",
                             "reactor":                      "17.0.0-alpha.18",
                             "rescue":                       "7.0.0-alpha.18",
                             "whittle":                      "0.0.5",
