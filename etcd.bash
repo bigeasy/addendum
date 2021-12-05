@@ -1,4 +1,4 @@
-nerdctl run -d -v /usr/share/ca-certificates/:$(PWD)/ssl -p 4001:4001 -p 2380:2380 -p 2379:2379 \
+docker run -d -v /usr/share/ca-certificates/:$(PWD)/ssl -p 4001:4001 -p 2380:2380 -p 2379:2379 \
  --name etcd quay.io/coreos/etcd:v2.3.8 \
  -name etcd0 \
  -advertise-client-urls http://${HostIP}:2379,http://${HostIP}:4001 \
