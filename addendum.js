@@ -758,10 +758,11 @@ class Addendum {
                 }
             }
         }
-        return [ 200, {
-            action: 'get',
-            node: got
-        }, { 'X-Etcd-Index': this.log.index } ]
+        return this._response(200, { action: 'get', node: got })
+    }
+
+    _response (code, body) {
+        return [ 200, body, { 'X-Etcd-Index': this.log.index } ]
     }
 
     // When we have a get request we send the value of the current participant.
