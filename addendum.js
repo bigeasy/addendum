@@ -697,12 +697,7 @@ class Addendum {
         if (got.dir) {
             const listing = this._wildmap.glob(params.key.concat(params.recursive ? this._wildmap.recursive : this._wildmap.single))
             if (listing.length == 0) {
-                return [ 200, {
-                    action: 'get',
-                    node: got
-                }, {
-                    'X-Etcd-Index': this.log.index
-                }]
+                return this._response(200, { action: 'get', node: got })
             }
             if (params.recursive) {
                 const sorted = listing.sort((left, right) => left.length - right.length)
@@ -738,12 +733,7 @@ class Addendum {
                 }
                 const nodes = descend(start.children)
                 if (nodes != null) {
-                    return [ 200, {
-                        action: 'get',
-                        node: { ...got, nodes }
-                    }, {
-                        'X-Etcd-Index': this.log.index
-                    } ]
+                    return this._response(200, { action: 'get', node: { ...got, nodes } })
                 }
             }
             const sorted = listing.map(key => this._wildmap.get(key))
@@ -800,7 +790,7 @@ class Addendum {
                     return response.node.key == params.path
                 })
                 if (found.length != 0) {
-                    return [ 200, found[0], { 'X-Etcd-Index': this.log.index } ]
+                    return this._response(200, found[0])
                 }
             }
             const through = new stream.PassThrough({ emitClose: true })
