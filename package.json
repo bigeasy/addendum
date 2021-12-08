@@ -7,7 +7,7 @@
 
     "keywords":
     [
-                            "rdbms", "database", "db", "migrations"
+                            "consensus", "etcd", "paxos", "key/value"
     ],
     "author":               "Alan Gutierrez",
     "homepage":             "https://github.com/bigeasy/addendum",
