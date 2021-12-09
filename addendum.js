@@ -377,7 +377,7 @@ class Addendum {
                             // request.
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
-                                response: [ got == null ? 201 : 200, response, { 'X-Etcd-Index': this.log.index } ]
+                                response: this._response(got == null ? 201 : 200, response)
                             })
                         }
                         break
@@ -413,7 +413,7 @@ class Addendum {
                             this._wildmap.set(create, response.node)
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
-                                response: [ 201, response, { 'X-Etcd-Index': this.log.index }]
+                                response: this._response(201, response)
                             })
                         }
                         break
@@ -429,7 +429,7 @@ class Addendum {
                             const response = { action: 'get', node: got }
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
-                                response: [ 200, response, { 'X-Etcd-Index': this.log.index } ]
+                                response: this._response(200, response)
                             })
                         }
                         break
@@ -499,7 +499,7 @@ class Addendum {
                             // request.
                             this.conference.map(entry.body.cookie, {
                                 method: 'edit',
-                                response: [ 200, response, { 'X-Etcd-Index': this.log.index }]
+                                response: this._response(200, response)
                             })
                         }
                         break
@@ -752,7 +752,7 @@ class Addendum {
     }
 
     _response (code, body) {
-        return [ 200, body, { 'X-Etcd-Index': this.log.index } ]
+        return [ code, body, { 'X-Etcd-Index': this.log.index } ]
     }
 
     // When we have a get request we send the value of the current participant.
