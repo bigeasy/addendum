@@ -29,7 +29,7 @@
                             "reactor":                      "17.0.0-alpha.20",
                             "rescue":                       "7.0.0-alpha.19",
                             "whittle":                      "0.0.5",
-                            "wildmap":                      "2.0.0-alpha.1"
+                            "wildmap":                      "2.0.0-alpha.2"
     },
     "devDependencies":
     {
